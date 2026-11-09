@@ -55,3 +55,12 @@ Deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main
 ## Storefronts and B&Bs
 - Every shop type has its own procedural storefront (seeded per shop): café terraces with parasols and chalkboards, bakery bay windows, open grocer fronts with produce steps, tiled fishmongers, arched florists, gold-lettered bookshops, barbers with a spinning pole, pharmacies with a lit green cross, stone-arched tascas, wine bars with barrel signs, cinema marquees with bulbs
 - B&B: a guesthouse front (painted door with fanlight, house number, blue AL licence plate, lantern, bay trees, bench, lace curtains, window boxes on every floor). Guests arrive with suitcases from 14:30, go out for dinner, stay 1–3 nights and check out by noon; rooms and appeal are shown in the shop card
+
+## Make it yours
+- **Names on real signs**: name your town (welcome sign, newspaper, postcards, tab title), streets (azulejo plaques on corner houses), squares (stone plaque) and shops (painted on the fascia; B&B gets a tiled board). Tap an empty street or a square in Look mode to rename; ✎ Rename in a shop card.
+- **Crest**: shape, two colours and an emblem in the *Your town* card (More tray). Flies on flags at the welcome sign, church, squares and bridges, stamps postcards and becomes the favicon.
+- **Colours**: wall, door and tile pattern per house; a town palette for new houses.
+- **Chronicle**: firsts and milestones written down automatically; founding-day lanterns every 10 days; residents send letters with their names.
+- **Mayor**: make any resident mayor (they wear your colours and wave at the camera); at town level 5 the town offers a statue in the square you choose.
+- **Traditions**: a town specialty (+15% at matching shops, a brass board, tourists ask for it) and your own festival theme and day each season.
+- **Sharing**: framed postcards with name, crest and day; visit a friend's town from their code, read-only, with your own town kept safe.

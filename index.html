@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="tilt-build" content="20261109165431">
-<script id="tiltUpd">(function(){var B='20261109165431';function chk(){if(!/^https?:/.test(location.protocol))return;fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(t){var m=t.match(/name="tilt-build" content="([^"]+)"/);if(!m||m[1]===B)return;var u=new URL(location.href);if(u.searchParams.get('v')===m[1])return;u.searchParams.set('v',m[1]);location.replace(u.toString());}).catch(function(){});}chk();document.addEventListener('visibilitychange',function(){if(!document.hidden)chk();});addEventListener('pageshow',function(e){if(e.persisted)chk();});})();</script>
+<meta name="tilt-build" content="20261109172606">
+<script id="tiltUpd">(function(){var B='20261109172606';function chk(){if(!/^https?:/.test(location.protocol))return;fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(t){var m=t.match(/name="tilt-build" content="([^"]+)"/);if(!m||m[1]===B)return;var u=new URL(location.href);if(u.searchParams.get('v')===m[1])return;u.searchParams.set('v',m[1]);location.replace(u.toString());}).catch(function(){});}chk();document.addEventListener('visibilitychange',function(){if(!document.hidden)chk();});addEventListener('pageshow',function(e){if(e.persisted)chk();});})();</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Tilt Town</title>
@@ -298,14 +298,14 @@ const AWN = [['#b8432f', '#efe3c8'], ['#2f5f6f', '#efe3c8'], ['#3f6a3f', '#e8d8a
 function buildHouse(c) {
   const R = rng(c.seed * 9973 + 7);
   const arch = archOf(c);
-  const body = [], roof = [], lit = [], dark = [], plain = [], glows = [], brick = [], tile = [];
+  const body = [], roof = [], lit = [], dark = [], plain = [], glows = [], brick = [], tile = [], lbls = [];
   const fl = c.floors;
   const nb = DIRS.map(([dx, dz]) => { const n = cellAt(c.i + dx, c.j + dz); return n && n.floors > 0 ? n : null; });
   const hw = arch === 'tower' ? .55 : .8;
   let x0 = -hw, x1 = hw, z0 = -hw, z1 = hw;
   if (nb[0]) x1 = 1; if (nb[1]) x0 = -1; if (nb[2]) z1 = 1; if (nb[3]) z0 = -1;
   const wall = jit(pick(R, WALLS), R, .06), trim = R() < .55 ? '#ece0c6' : '#3b3530', shut = pick(R, SHUT);
-  if (c.style === 'nouveau') wall.set(pick(rng(c.seed), ['#e8c8c0', '#c8d8c0', '#e8dcb0', '#c0d0e0'])); if (c.style === 'villa') wall.set('#f2eee6');
+  if (c.style === 'nouveau') wall.set(pick(rng(c.seed), ['#e8c8c0', '#c8d8c0', '#e8dcb0', '#c0d0e0'])); if (c.style === 'villa') wall.set('#f2eee6'); if (c.paint?.w) wall.set(c.paint.w);
   const SL = shabbyLvl(c), RS = rng(c.seed * 3 + 11); if (SL) wall.lerp(new THREE.Color('#8a7a6a'), .22 * SL);
   const rc = R() < .16 ? jit(pick(R, ['#4a5560', '#55606a', '#3f4850']), R, .04) : jit(pick(R, ROOFS), R, .05);
   if (c.style === 'nouveau') rc.set('#5f8f7a');
@@ -324,7 +324,7 @@ function buildHouse(c) {
   const setback = fl >= 3 && !turret && R() < .3;
   const freeFaces = [0, 1, 2, 3].filter(k => !nb[k] && k !== doorFace && !(turret && (k === turret.a || k === turret.b)));
   const bayFace = fl >= 3 && freeFaces.length && R() < .45 ? pick(R, freeFaces) : -1;
-  const azul = R() < .24 || c.style === 'villa', azTint = pick(R, ['#ffffff', '#eef4ff', '#f2f8ea', '#fff2e2']), quoin = R() < .4, winStyle = pick(R, ['plain', 'lintel', 'key', 'ped', 'key']);
+  const azulR = R() < .24, azTintR = pick(R, ['#ffffff', '#eef4ff', '#f2f8ea', '#fff2e2']), azul = c.paint?.t ? c.paint.t !== 'none' : azulR || c.style === 'villa', azTint = c.paint?.t && c.paint.t !== 'none' ? TILE_TINT[c.paint.t] : azTintR, quoin = R() < .4, winStyle = pick(R, ['plain', 'lintel', 'key', 'ped', 'key']);
   const mull = R() < .7, ivyFace = R() < .22 && freeFaces.length ? pick(R, freeFaces) : -1, ivyH = 1 + Math.floor(R() * Math.min(3, fl)), ivyT = (R() - .5) * .8;
   const pipeFace = R() < .65 && freeFaces.length ? pick(R, freeFaces) : -1, quoinCol = trim === '#3b3530' ? '#d8ccb4' : jit('#e6dccb', R, .03);
   const CURT = ['#a83a3a', '#e8dcc0', '#3a5a8a', '#6a8a4a', '#d8a040'];
@@ -388,7 +388,7 @@ function buildHouse(c) {
       const fm = mul(m, tr(0, 0, 0, ry));
       if (f === 0 && c.biz && k === doorFace) { // business shopfront
         const sw = Math.min(span * .8, 1.5), em = mul(fm, tr(0, 0, half));
-        const sf = storefront(c, em, sw, R, {body, plain, shopGlass, glows, flutter, signG, lit, tile});
+        const sf = storefront(c, em, sw, R, {body, plain, shopGlass, glows, flutter, signG, lit, tile, lbls});
         swing = sf.swing; plate = sf.plate; shop = sf.shop; pole = sf.pole || null;
         continue;
       }
@@ -397,12 +397,12 @@ function buildHouse(c) {
         const em = mul(fm, tr(t, 0, half));
         if (f === 0 && k === doorFace && si === slots.length - 1) {
           body.push(box(.56, .82, .05, trim, mul(em, tr(0, -FH / 2 + .41, .01))));
-          plain.push(box(.44, .72, .05, '#4a2f22', mul(em, tr(0, -FH / 2 + .36, .03))));
+          plain.push(box(.44, .72, .05, c.paint?.d || '#4a2f22', mul(em, tr(0, -FH / 2 + .36, .03))));
           plain.push(box(.62, .08, .22, '#8b8076', mul(em, tr(0, -FH / 2 + .04, .1))));
           for (const px of [-.1, .1]) for (const py of [.2, .5]) plain.push(box(.14, .2, .02, '#3a2418', mul(em, tr(px, -FH / 2 + py, .06))));
           plain.push(box(.03, .03, .03, '#c9a33f', mul(em, tr(.15, -FH / 2 + .36, .07))));
           addLit(box(.38, .07, .02, '#fff', mul(em, tr(0, -FH / 2 + .77, .04))));
-          plain.push(box(.1, .07, .015, '#2f5ea8', mul(em, tr(.36, -FH / 2 + .62, .03))));
+          plain.push(box(.1, .07, .015, '#2f5ea8', mul(em, tr(.36, -FH / 2 + .62, .03)))); if (plaqueFor(c)) { const px_ = -Math.min(.46, span / 2 - .2); plain.push(box(.38, .13, .012, '#1f3f8a', mul(em, tr(px_, -FH / 2 + .62, .03)))); lbls.push(labelGeo('street:' + c.i, streetName(c.i), {kind: 'azul'}, .36, .11).applyMatrix4(mul(em, tr(px_, -FH / 2 + .62, .038)))); }
           if (R() < .55) { plain.push(box(.03, .03, .14, '#2a2622', mul(em, tr(-.38, -FH / 2 + .85, .07)))); addLit(box(.09, .13, .09, '#fff', mul(em, tr(-.38, -FH / 2 + .76, .14)))); glowLast(new THREE.Vector3(-.38, -FH / 2 + .76, .3).applyMatrix4(em)); }
           if (R() < .2) { plain.push(box(.03, .03, .42, '#2a2622', mul(em, tr(.45, -FH / 2 + .9, .21)))); plain.push(box(.04, .26, .32, pick(R, ['#2f4a3a', '#7a3a2a', '#2a3a5a', '#8a6a2a']), mul(em, tr(.45, -FH / 2 + .74, .28)))); }
           return;
@@ -521,7 +521,7 @@ function buildHouse(c) {
     if (R() < .35) { plain.push(box(.03, .8, .03, '#2a2622', mul(rm, tr(0, rh + .4, L * .3)))); plain.push(box(.5, .02, .02, '#2a2622', mul(rm, tr(0, rh + .65, L * .3)))); }
     if (arch === 'tower' && R() < .5) plain.push(box(.04, .45, .04, '#2a2622', mul(rm, tr(0, rh + .2, 0)))), plain.push(box(.3, .12, .02, '#2a2622', mul(rm, tr(.1, rh + .38, 0)))); // weathervane
   }
-  return {body, roof, lit, dark, plain, glows, chims, brick, tile, shop, shopGlass, sign: signG, flutter, swing, plate, pole};
+  return {body, roof, lit, dark, plain, glows, chims, brick, tile, shop, shopGlass, sign: signG, flutter, swing, plate, pole, lbls};
 }
 
 /* ---------- decor: laundry, power lines, stairs ---------- */
@@ -594,6 +594,7 @@ function rebuildLaundry() {
   if (typeof landmarkDecor === 'function') landmarkDecor(wires);
   if (typeof storyDecor === 'function') storyDecor(wires, festLit);
   if (day > 0 && effWeather() !== 'snow' && (typeof g2Autumn === 'undefined' || g2Autumn)) { const R4_ = rng(day * 13 + 1), n = Math.min(10, day * 2); for (const c of cells) { if (!walkable(c) || c.water) continue; for (let q = 0; q < n; q++) { const x = wx(c.i) + (R4_() - .5) * 1.9, z = wx(c.j) + (R4_() - .5) * 1.9; wires.push(box(.07, .006, .05, pick(R4_, ['#c4502b', '#d9772b', '#e0a23a', '#8e3a2a']), tr(x, c.lvl * LV + .03, z, R4_() * 6))); } } }
+  { const op = [], ol = [], of = []; try { ownDecor(op, ol, of); } catch (e) { console.warn(e); } if (op.length) laundryG.add(mkMesh(op, plainMat, true)); if (ol.length) laundryG.add(mkMesh(ol, labelMat, false)); if (of.length) laundryG.add(mkMesh(of, flagMat, true)); }
   if (festLit.length) laundryG.add(mkMesh(festLit, litMat, false));
   if (g.length) laundryG.add(mkMesh(g, swayMat, true));
   if (wires.length) laundryG.add(mkMesh(wires, plainMat, true));
@@ -669,7 +670,9 @@ function buildPlaza(c) {
   for (const [x, z] of [[.75, .75], [-.75, -.75]]) { plain.push(cyl(.14, .11, .2, '#a0583a', tr(x, .1, z), 8)); plain.push(paint(new THREE.IcosahedronGeometry(.2, 0), '#5f7a35').applyMatrix4(tr(x, .34, z))); }
   const sway = []; for (const [x, z] of [[.78, -.78], [-.78, .78]]) { plain.push(cyl(.04, .07, .9, '#5a4232', tr(x, .45, z), 6)); const base = pick(R, ['#d9772b', '#c4502b', '#e0a23a', '#6f8a3a']); for (let q = 0; q < 4; q++) sway.push(paint(new THREE.IcosahedronGeometry(.24 + R() * .1, 1), jit(base, R, .08)).applyMatrix4(tr(x + (R() - .5) * .3, 1.05 + R() * .3, z + (R() - .5) * .3))); }
   sway.forEach(g => { const p = g.attributes.position, a = new Float32Array(p.count); for (let i = 0; i < p.count; i++) a[i] = Math.max(0, p.getY(i) - .5) * .05; g.setAttribute('sway', new THREE.BufferAttribute(a, 1)); });
-  return {plain, body, sway, glows: []};
+  const lbls = [], pk = c.i * N + c.j; plain.push(box(.07, .34, .18, '#8a7a64', tr(.84, .17, 0))); plain.push(box(.06, .17, .54, '#b8aa98', tr(.86, .41, 0))); lbls.push(labelGeo('plaza:' + pk, plazaName(c), {kind: 'stone'}, .52, .15).applyMatrix4(tr(.894, .41, 0, Math.PI / 2)));
+  if (c.statue) lbls.push(labelGeo('statue', OWN.statue || (OWN.mayor ? 'Mayor ' + OWN.mayor.name : townName()), {kind: 'brass'}, .5, .1).applyMatrix4(tr(0, .27, .325)));
+  return {plain, body, sway, glows: [], lbls};
 }
 function distCob(c) { return ({old: '#c8ae86', river: '#a9b4b4', market: '#c79a86'})[c.dist] || '#b8aa98'; }
 function rebuildTerrain(c) {
@@ -696,6 +699,7 @@ function rebuildObj(c) {
   if (parts.shopGlass?.length) { const im = mkMesh(parts.shopGlass, interiorMat(c), false); im.layers.enable(1); g.add(im); }
   [[parts.sway, swayMat], [parts.brick, brickMat, false], [parts.tile, azMat, false], [parts.body, bodyMat], [parts.roof, roofMat], [parts.plain, plainMat], [parts.lit, c.floors > 0 ? houseLit(c) : litMat, false], [parts.dark, darkMat, false], [parts.sign, signMat, false]].forEach(([geos, mat, cast]) => { if (geos && geos.length) g.add(mkMesh(geos, mat, cast !== false)); });
   if (parts.flutter?.length) g.add(mkMesh(parts.flutter, flutterMat, true));
+  if (parts.lbls?.length) g.add(mkMesh(parts.lbls, labelMat, false));
   c.swing = null; c.plate = null;
   if (parts.swing) { const h = new THREE.Group(); h.matrixAutoUpdate = false; h.matrix.copy(parts.swing.m); const sw = new THREE.Group(); sw.add(mkMesh(parts.swing.plain, plainMat, true)); const sm = mkMesh(parts.swing.sign, signMat, false); sm.layers.enable(1); sw.add(sm); h.add(sw); g.add(h); c.swing = sw; }
   c.pole = null; if (parts.pole) { const h = new THREE.Group(); h.matrixAutoUpdate = false; h.matrix.copy(parts.pole.m); const pm_ = mkMesh(parts.pole.g, plainMat, false); h.add(pm_); g.add(h); c.pole = pm_; }
@@ -1049,7 +1053,263 @@ const isOpenAt = (type, h) => BIZ[type].hours.some(([a, b]) => h >= a && h < b);
 function frontFace(c) { for (const k of [2, 0, 3, 1]) { const n = cellAt(c.i + DIRS[k][0], c.j + DIRS[k][1]); if (n && !n.water && walkable(n)) return k; } return undefined; }
 let businesses = [];
 const STREETS = ['Rua das Flores', 'Rua do Sol', 'Rua da Ribeira', 'Rua Nova', 'Travessa do Gato', 'Rua das Taipas', 'Beco da Lua', 'Rua Direita', 'Calçada da Vitória', 'Rua do Poço', 'Rua Escura', 'Largo do Peixe', 'Rua da Fonte', 'Rua do Moinho'];
-const address = c => `${STREETS[c.i % STREETS.length]}, ${c.j * 2 + 1}`;
+const address = c => `${streetName(c.i)}, ${c.j * 2 + 1}`;
+
+/* ==========================================================================
+   OWNERSHIP: names (town, streets, squares, shops) painted on real boards,
+   a town crest on flags/postcards/favicon, house colours, a chronicle,
+   a mayor, a town specialty, your own festival, postcards, visiting friends.
+   ========================================================================== */
+const OWN = {town: null, founded: 0, streets: {}, plazas: {}, crest: {shape: 'shield', c1: '#2f5ea8', c2: '#efe3c8', emblem: '⛵'}, palette: null, mayor: null, spec: null, fest: {theme: 'sjoao', day: 3}, chronicle: [], firsts: {}, asked: {}};
+const TOWN_A = ['Vila', 'Porto', 'Ribeira', 'Santa', 'São', 'Monte', 'Vale', 'Praia', 'Foz', 'Cais'], TOWN_B = ['Nova', 'do Sol', 'da Lua', 'Velha', 'das Flores', 'do Rio', 'Azul', 'da Ponte', 'de Telha', 'do Gato', 'Alegre', 'dos Barcos'];
+const STREET_A = ['Rua', 'Rua', 'Travessa', 'Calçada', 'Beco', 'Largo', 'Rua'], STREET_B = ['das Flores', 'do Sol', 'da Ribeira', 'Nova', 'do Gato', 'das Taipas', 'da Lua', 'Direita', 'da Vitória', 'do Poço', 'dos Ferreiros', 'da Fonte', 'das Laranjeiras', 'do Pão', 'dos Pescadores', 'da Sé', 'do Mirante', 'das Andorinhas'];
+const SQUARE_A = ['Praça', 'Largo', 'Praça', 'Jardim'], SQUARE_B = ['da Avó', 'do Coreto', 'das Pombas', 'da Liberdade', 'do Chafariz', 'dos Namorados', 'da Alegria', 'do Pelourinho', 'das Tílias', 'do Sol'];
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+const suggestTown = () => `${rnd(TOWN_A)} ${rnd(TOWN_B)}`, suggestStreet = () => `${rnd(STREET_A)} ${rnd(STREET_B)}`, suggestSquare = () => `${rnd(SQUARE_A)} ${rnd(SQUARE_B)}`;
+const townName = () => OWN.town || 'Tilt Town';
+const streetName = i => OWN.streets[i] || STREETS[i % STREETS.length];
+const cellKey = c => c.i * N + c.j;
+const plazaName = c => OWN.plazas[cellKey(c)]?.name || `Praça ${streetName(c.i).replace(/^(Rua|Travessa|Calçada|Beco|Largo) /, '')}`;
+const hex = c => '#' + new THREE.Color(c).getHexString();
+const escH = s => String(s).replace(/[&<>"]/g, ch => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'})[ch]);
+/* ---- crest ---- */
+const CREST_SHAPES = ['shield', 'round', 'banner', 'heart'], CREST_COLS = ['#2f5ea8', '#c0442e', '#2f6a4a', '#c9a33f', '#5a3a8a', '#1e1e2a', '#efe3c8', '#d0708a'], EMBLEMS = ['⛵', '🐟', '🏰', '☀️', '☕', '🌸', '🍇', '🗝️', '⚓', '🐓'];
+function crestPath(x, cx, cy, S, shape) {
+  x.beginPath();
+  if (shape === 'round') x.arc(cx, cy, S * .46, 0, 6.283);
+  else if (shape === 'banner') { x.moveTo(cx - S * .36, cy - S * .46); x.lineTo(cx + S * .36, cy - S * .46); x.lineTo(cx + S * .36, cy + S * .46); x.lineTo(cx, cy + S * .3); x.lineTo(cx - S * .36, cy + S * .46); x.closePath(); }
+  else if (shape === 'heart') { x.moveTo(cx, cy + S * .44); x.bezierCurveTo(cx - S * .55, cy + S * .05, cx - S * .42, cy - S * .5, cx, cy - S * .2); x.bezierCurveTo(cx + S * .42, cy - S * .5, cx + S * .55, cy + S * .05, cx, cy + S * .44); }
+  else { x.moveTo(cx - S * .4, cy - S * .44); x.lineTo(cx + S * .4, cy - S * .44); x.lineTo(cx + S * .4, cy + .02 * S); x.quadraticCurveTo(cx + S * .4, cy + S * .38, cx, cy + S * .48); x.quadraticCurveTo(cx - S * .4, cy + S * .38, cx - S * .4, cy + .02 * S); x.closePath(); }
+}
+function drawCrest(x, cx, cy, S, cr = OWN.crest) {
+  x.save(); crestPath(x, cx, cy, S, cr.shape); x.fillStyle = cr.c1; x.fill(); x.clip();
+  x.fillStyle = cr.c2; x.fillRect(cx, cy - S, S, S * 2); x.fillStyle = 'rgba(255,255,255,.12)'; x.fillRect(cx - S, cy - S, S * 2, S * .55);
+  x.restore(); crestPath(x, cx, cy, S, cr.shape); x.lineWidth = Math.max(2, S * .045); x.strokeStyle = '#2a1d16'; x.stroke();
+  x.save(); x.font = `${Math.round(S * .44)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.shadowColor = 'rgba(0,0,0,.35)'; x.shadowBlur = S * .04; x.fillText(cr.emblem, cx, cy + S * .02); x.restore();
+}
+const crestCv = document.createElement('canvas'); crestCv.width = crestCv.height = 256;
+const flagCv = document.createElement('canvas'); flagCv.width = 256; flagCv.height = 170;
+const flagTex = new THREE.CanvasTexture(flagCv); flagTex.colorSpace = THREE.SRGBColorSpace;
+function paintCrest() {
+  const a = crestCv.getContext('2d'); a.clearRect(0, 0, 256, 256); drawCrest(a, 128, 128, 240);
+  const f = flagCv.getContext('2d'); f.fillStyle = OWN.crest.c1; f.fillRect(0, 0, 256, 170); f.fillStyle = OWN.crest.c2; f.fillRect(0, 0, 256, 28); f.fillRect(0, 142, 256, 28); drawCrest(f, 128, 85, 130); flagTex.needsUpdate = true;
+  try { const url = crestCv.toDataURL('image/png'); for (const rel of ['icon', 'apple-touch-icon']) { let l = document.querySelector(`link[rel="${rel}"]`); if (!l) { l = document.createElement('link'); l.rel = rel; document.head.appendChild(l); } l.href = url; } } catch (e) { }
+  if (typeof lblRedrawAll === 'function') lblRedrawAll();
+}
+const flagMat = new THREE.MeshToonMaterial({map: flagTex, gradientMap: grad, side: THREE.DoubleSide});
+const flagU = {uTime: {value: 0}};
+flagMat.onBeforeCompile = sh => { sh.uniforms.uTime = flagU.uTime; sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n{float k=uv.x;vec4 w=modelMatrix*vec4(position,1.);transformed.z+=sin(uTime*4.+k*6.+w.x+w.z)*.035*k;transformed.y+=sin(uTime*3.1+k*5.)*.012*k;}'); };
+flagMat.customProgramCacheKey = () => 'flag';
+/* ---- text labels: one shared canvas atlas, 64 slots of 512x128 ---- */
+const LBL = {cv: document.createElement('canvas'), slots: new Map(), list: [], next: 0};
+LBL.cv.width = LBL.cv.height = 2048; LBL.ctx = LBL.cv.getContext('2d');
+LBL.tex = new THREE.CanvasTexture(LBL.cv); LBL.tex.colorSpace = THREE.SRGBColorSpace; LBL.tex.anisotropy = 4;
+const labelMat = new THREE.MeshToonMaterial({map: LBL.tex, gradientMap: grad});
+labelMat.onBeforeCompile = sh => { sh.uniforms.uNight = litU.uNight; sh.fragmentShader = 'uniform float uNight;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance+=diffuseColor.rgb*uNight*.35;'); };
+labelMat.customProgramCacheKey = () => 'label';
+function fitFont(x, text, family, weight, maxW, size) { let s = size; do { x.font = `${weight} ${Math.round(s)}px ${family}`; if (x.measureText(text).width <= maxW) break; s *= .92; } while (s > 8); return s; }
+function lblDraw(s) {
+  const x = LBL.ctx, X = (s.idx % 4) * 512, Y = Math.floor(s.idx / 4) * 128, bh = Math.min(128, 512 / s.aspect), by = Y + (128 - bh) / 2, st = s.style, t = s.text;
+  x.clearRect(X, Y, 512, 128); x.save(); x.beginPath(); x.rect(X, by, 512, bh); x.clip();
+  const CAP = 'Caprasimo,Georgia,serif', BRI = "'Bricolage Grotesque',system-ui,sans-serif";
+  if (st.kind === 'azul') { x.fillStyle = '#f8f6f0'; x.fillRect(X, by, 512, bh); x.strokeStyle = '#1f3f8a'; x.lineWidth = bh * .07; x.strokeRect(X + bh * .08, by + bh * .08, 512 - bh * .16, bh * .84); x.lineWidth = bh * .025; x.strokeRect(X + bh * .17, by + bh * .17, 512 - bh * .34, bh * .66); x.fillStyle = '#1f3f8a'; for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { x.beginPath(); x.arc(X + bh * .12 + a * (512 - bh * .24), by + bh * .12 + b * bh * .76, bh * .05, 0, 6.3); x.fill(); } fitFont(x, t, CAP, 400, 512 - bh * .6, bh * .44); x.fillStyle = '#1f3f8a'; }
+  else if (st.kind === 'stone') { x.fillStyle = '#d8ccb4'; x.fillRect(X, by, 512, bh); x.strokeStyle = '#8a7a64'; x.lineWidth = bh * .08; x.strokeRect(X + bh * .1, by + bh * .1, 512 - bh * .2, bh * .8); fitFont(x, t, CAP, 400, 512 - bh * .5, bh * .46); x.fillStyle = '#3a2a20'; }
+  else if (st.kind === 'brass') { const g = x.createLinearGradient(X, by, X, by + bh); g.addColorStop(0, '#e0b85a'); g.addColorStop(1, '#a8802a'); x.fillStyle = g; x.fillRect(X, by, 512, bh); x.strokeStyle = '#6a4a1a'; x.lineWidth = bh * .06; x.strokeRect(X + bh * .06, by + bh * .06, 512 - bh * .12, bh * .88); fitFont(x, t, BRI, 700, 512 - bh * .4, bh * .5); x.fillStyle = '#2a1d16'; }
+  else if (st.kind === 'welcome') { x.fillStyle = '#efe3c8'; x.fillRect(X, by, 512, bh); x.strokeStyle = OWN.crest.c1; x.lineWidth = bh * .08; x.strokeRect(X + bh * .06, by + bh * .06, 512 - bh * .12, bh * .88); x.drawImage(crestCv, X + bh * .12, by + bh * .1, bh * .8, bh * .8); x.fillStyle = '#6a5a4a'; x.font = `600 ${Math.round(bh * .2)}px ${BRI}`; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText('Bem-vindos a', X + bh * 1.05, by + bh * .3); fitFont(x, t, CAP, 400, 512 - bh * 1.2, bh * .42); x.fillStyle = '#2a1d16'; x.fillText(t, X + bh * 1.05, by + bh * .64); x.restore(); s.uv = [X / 2048, 1 - (by + bh) / 2048, (X + 512) / 2048, 1 - by / 2048]; LBL.tex.needsUpdate = true; return; }
+  else { x.fillStyle = st.bg || '#2a2622'; x.fillRect(X, by, 512, bh); x.strokeStyle = st.fg || '#e8d8a8'; x.globalAlpha = .5; x.lineWidth = bh * .04; x.strokeRect(X + bh * .1, by + bh * .12, 512 - bh * .2, bh * .76); x.globalAlpha = 1; fitFont(x, t, CAP, 400, 512 - bh * .45, bh * .56); x.fillStyle = st.fg || '#e8d8a8'; }
+  x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t, X + 256, by + bh * .53); x.restore();
+  s.uv = [X / 2048, 1 - (by + bh) / 2048, (X + 512) / 2048, 1 - by / 2048]; LBL.tex.needsUpdate = true;
+}
+function lblSlot(key, text, style, aspect) {
+  let s = LBL.slots.get(key);
+  if (!s) { const idx = LBL.next++ % 64; for (const [k, o] of LBL.slots) if (o.idx === idx) LBL.slots.delete(k); s = {idx, key}; LBL.slots.set(key, s); }
+  if (s.text !== text || s.sk !== JSON.stringify(style) || s.aspect !== aspect) { s.text = text; s.style = style; s.sk = JSON.stringify(style); s.aspect = aspect; lblDraw(s); }
+  return s;
+}
+function lblRedrawAll() { for (const s of LBL.slots.values()) lblDraw(s); }
+function labelGeo(key, text, style, w, h) {
+  const s = lblSlot(key, text, style, w / h), g = new THREE.PlaneGeometry(w, h), uv = g.attributes.uv, [u0, v0, u1, v1] = s.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, u0 + uv.getX(i) * (u1 - u0), v0 + uv.getY(i) * (v1 - v0));
+  return g;
+}
+const lblRefresh = () => { for (const s of LBL.slots.values()) { const t = s.key === 'town' ? townName() : s.key.startsWith('street:') ? streetName(+s.key.slice(7)) : s.key.startsWith('plaza:') ? plazaName(cells[+s.key.slice(6)] || {i: 0, j: 0}) : s.key.startsWith('shop:') ? (cells[+s.key.slice(5)]?.bizName || s.text) : s.text; if (t !== s.text) { s.text = t; lblDraw(s); } } };
+if (document.fonts) Promise.all([document.fonts.load('40px Caprasimo'), document.fonts.load("700 40px 'Bricolage Grotesque'")]).then(() => { lblRedrawAll(); paintCrest(); }).catch(() => { });
+/* ---- where the names live in the world ---- */
+function plaqueFor(c) { return cells.find(h => h.i === c.i && h.floors > 0 && !h.biz && frontFace(h) !== undefined) === c; }
+const SPECS = {nata: {label: 'Pastéis de nata', types: ['bakery', 'cafe']}, sardinha: {label: 'Grilled sardines', types: ['fish', 'tasca']}, porto: {label: 'Port wine', types: ['winebar', 'tasca']}, francesinha: {label: 'Francesinha', types: ['tasca', 'cafe']}, flores: {label: 'Flower crowns', types: ['florist']}};
+const ownSpecMult = t => OWN.spec && SPECS[OWN.spec].types.includes(t) ? 1.15 : 1;
+function ownDecor(plain, lbls, flags) {
+  // welcome sign at the town edge, facing inwards
+  const ctr = {i: N / 2 - .5, j: N / 2 - .5};
+  const edge = cells.filter(c => walkable(c) && !c.water && !c.kind && DIRS.some(([dx, dz]) => { const n = cellAt(c.i + dx, c.j + dz); return !n || n.owned === false; })).sort((a, b) => Math.hypot(a.i - ctr.i, a.j - ctr.j) - Math.hypot(b.i - ctr.i, b.j - ctr.j));
+  const e = edge[0];
+  if (e) { const k = DIRS.findIndex(([dx, dz]) => { const n = cellAt(e.i + dx, e.j + dz); return !n || n.owned === false; }), [dx, dz] = DIRS[k], y = e.lvl * LV, px = -dz, pz = dx;
+    const x0 = wx(e.i) + dx * .72 + px * .45, z0 = wx(e.j) + dz * .72 + pz * .45, ry = Math.atan2(-dx, -dz); ownDecor.at = [x0, y + .66, z0, dx, dz];
+    for (const s of [-.36, .36]) plain.push(box(.05, .82, .05, '#5a4232', tr(x0 + px * s, y + .41, z0 + pz * s)));
+    plain.push(box(.86, .26, .05, '#6a4a30', mul(tr(x0, y + .66, z0, ry), tr(0, 0, 0))));
+    lbls.push(labelGeo('town', townName(), {kind: 'welcome'}, .8, .2).applyMatrix4(mul(tr(x0, y + .66, z0, ry), tr(0, 0, .065))));
+    plain.push(cyl(.02, .02, 1.5, '#2a2622', tr(x0 + px * .62, y + .75, z0 + pz * .62), 5));
+    flags.push(new THREE.PlaneGeometry(.42, .28, 8, 1).translate(.21, 0, 0).applyMatrix4(tr(x0 + px * .62, y + 1.34, z0 + pz * .62, ry + Math.PI / 2)));
+  }
+  for (const c of cells) {
+    const x = wx(c.i), z = wx(c.j), y = topY(c);
+    if (c.kind === 'church') { plain.push(cyl(.02, .02, 1.6, '#2a2622', tr(x + .82, y + .8, z + .7), 5)); flags.push(new THREE.PlaneGeometry(.4, .27, 8, 1).translate(.2, 0, 0).applyMatrix4(tr(x + .82, y + 1.45, z + .7))); }
+    if (c.kind === 'plaza') { plain.push(cyl(.02, .025, 1.5, '#2a2622', tr(x - .86, y + .75, z + .42), 5)); flags.push(new THREE.PlaneGeometry(.38, .25, 8, 1).translate(.19, 0, 0).applyMatrix4(tr(x - .86, y + 1.36, z + .42, Math.PI / 4))); }
+    if (c.kind === 'bridge') for (const s of [-1, 1]) { plain.push(cyl(.012, .012, .5, '#2a2622', tr(x + .6, .45, z + s * .92), 4)); flags.push(new THREE.PlaneGeometry(.18, .12, 4, 1).translate(.09, 0, 0).applyMatrix4(tr(x + .6, .64, z + s * .92, Math.PI / 2))); }
+  }
+}
+/* ---- small prompt card: a name with a suggestion and a dice ---- */
+function namePrompt(title, sub, value, roll, save, extra = '') {
+  cardFor = {kind: 'name'};
+  cardEl.innerHTML = `<div class="ch"><div><b>${escH(title)}</b><small>${escH(sub)}</small></div><button class="x">×</button></div>
+    <div class="grid" style="gap:6px"><input id="nmIn" type="text" maxlength="28" value="${escH(value)}" style="flex:1;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid rgba(243,230,204,.25);background:rgba(0,0,0,.25);color:var(--paper);font:400 17px Caprasimo,Georgia,serif;width:100%"><button class="act" id="nmRoll" style="min-width:48px;font-size:18px" title="Another suggestion">🎲</button></div>
+    ${extra}<div class="grid"><button class="act" id="nmSave" style="background:#f0a35c;color:#24170f">Save name</button><button class="act" id="nmNo">Not now</button></div>`;
+  cardEl.style.display = 'block';
+  const inp = cardEl.querySelector('#nmIn');
+  cardEl.querySelector('.x').onclick = closeCard; cardEl.querySelector('#nmNo').onclick = closeCard;
+  cardEl.querySelector('#nmRoll').onclick = () => { inp.value = roll(); };
+  cardEl.querySelector('#nmSave').onclick = () => { const v = inp.value.trim().slice(0, 28); if (!v) return; save(v); scheduleSave(); };
+}
+function setTownName(v, first) { const had = OWN.town; OWN.town = v; ownIdentity(); lblRefresh(); if (!had || first) ownLog(`The town is named ${v}`); toast(`Welcome to ${v}!`); for (let k = 0; k < 3; k++) setTimeout(firework, k * 300); rebuildLaundry(); }
+function askTownName() { if (OWN.asked.town) return; OWN.asked.town = 1; namePrompt('Name your town', 'It goes on the welcome sign, the paper and your postcards', suggestTown(), suggestTown, v => { setTownName(v, true); townCard(); }); }
+function streetCard(c) {
+  selectCell(c);
+  const i = c.i, shops = businesses.filter(b => b.cell.i === i), homes = cells.filter(h => h.i === i && h.floors > 0), people = homes.reduce((a, h) => a + (h.res || []).length, 0);
+  namePrompt(streetName(i), `${homes.length} houses · ${people} residents${shops.length ? ' · ' + shops.map(b => b.name).join(', ') : ''}`, streetName(i), suggestStreet, v => { OWN.streets[i] = v; lblRefresh(); refresh(c); say(`Renamed to ${v}`); streetCard(c); }, '<p class="tip">Street plaques on the corner houses show this name.</p>');
+  cardEl.querySelector('#nmSave').textContent = 'Rename street';
+}
+function plazaCard(c) {
+  selectCell(c);
+  const p = OWN.plazas[cellKey(c)];
+  namePrompt(plazaName(c), p ? `Dedicated on day ${p.day + 1}` : 'A square in your town', plazaName(c), suggestSquare, v => { const was = !OWN.plazas[cellKey(c)]; OWN.plazas[cellKey(c)] = {name: v, day: p?.day ?? day}; if (was) ownLog(`${v} is dedicated`); lblRefresh(); refresh(c); plazaCard(c); },
+    `<p class="tip">The name is carved on the plaque. Residents will start meeting “at ${escH(plazaName(c))}”.</p>${OWN.mayor && !c.statue && has('statue') ? '<button class="act wide" id="stMayor">Put the mayor\'s statue here</button>' : ''}`);
+  cardEl.querySelector('#nmSave').textContent = 'Name this square';
+  const sb = cardEl.querySelector('#stMayor'); if (sb) sb.onclick = () => placeStatue(c);
+}
+function placeStatue(c) { c.statue = true; refresh(c); ownLog(`A statue of Mayor ${OWN.mayor.name} goes up in ${plazaName(c)}`); toast(`The town honours Mayor ${OWN.mayor.name}`); for (let k = 0; k < 4; k++) setTimeout(firework, k * 300); closeCard(); }
+/* ---- your town card ---- */
+const PALETTES = {porto: ['#d8a55c', '#5f9e9a', '#d98a6c', '#e6d2a6', '#6f8fb3', '#c9a33f', '#c97b84'], pastel: ['#f2c6b4', '#bcd8d0', '#f4e3b0', '#c8d4ec', '#e8c4d4', '#d8e8c0'], ochre: ['#c9a33f', '#d98a4a', '#b8682e', '#e0b870', '#a8582e'], seaside: ['#f4f0e8', '#6f8fb3', '#a8c8d8', '#e6eef4', '#2f5ea8'], terracotta: ['#b8542e', '#d8784a', '#e8b890', '#8a3a2a', '#f0d8b8']};
+const FEST_THEMES = {sjoao: {label: 'São João', cols: ['#d94f3d', '#e8c34a', '#3f8a5a', '#2f6aa8', '#f4f0e8', '#e07a3a']}, vindima: {label: 'Grape harvest', cols: ['#6a1f3a', '#8a3a5a', '#c9a33f', '#4f7a32', '#f4ecdc']}, sardinha: {label: 'Sardine festival', cols: ['#2f6aa8', '#a8b4bc', '#f4f0e8', '#d94f3d']}, lanternas: {label: 'Lantern night', cols: ['#e8c34a', '#f0a35c', '#f4f0e8', '#c0442e']}};
+let foundingTonight = false;
+function festColors() { return foundingTonight ? [OWN.crest.c1, OWN.crest.c2, '#f4f0e8'] : FEST_THEMES[OWN.fest.theme]?.cols || FEST_THEMES.sjoao.cols; }
+function townCard() {
+  cardFor = {kind: 'town'}; const cr = OWN.crest, sw = (k, cols, cur) => cols.map(c => `<button class="act" data-${k}="${c}" style="min-width:34px;min-height:34px;padding:0;border-radius:50%;background:${c};box-shadow:${c === cur ? '0 0 0 3px #f0a35c' : 'inset 0 0 0 1px rgba(255,255,255,.25)'}"></button>`).join('');
+  const days = Math.max(0, day - OWN.founded);
+  cardEl.innerHTML = `<div class="ch"><div style="display:flex;align-items:center;gap:10px"><img src="${crestCv.toDataURL()}" style="width:44px;height:44px"><div><b>${escH(townName())}</b><small>Founded day ${OWN.founded + 1} · ${days} day${days === 1 ? '' : 's'} old · ${citizens.filter(z => z.role !== 'guest').length} residents</small></div></div><button class="x">×</button></div>
+    <div class="grid"><button class="act" id="tcName">Rename town</button><button class="act" id="tcChron">Chronicle (${OWN.chronicle.length})</button></div>
+    <p><span>Crest</span></p><div class="grid">${CREST_SHAPES.map(s => `<button class="act ${cr.shape === s ? 'on' : ''}" data-shape="${s}">${s[0].toUpperCase() + s.slice(1)}</button>`).join('')}</div>
+    <div class="grid" style="flex-wrap:wrap">${sw('c1', CREST_COLS, cr.c1)}</div><div class="grid" style="flex-wrap:wrap">${sw('c2', CREST_COLS, cr.c2)}</div>
+    <div class="grid" style="flex-wrap:wrap">${EMBLEMS.map(e => `<button class="act ${cr.emblem === e ? 'on' : ''}" data-em="${e}" style="min-width:40px;font-size:18px">${e}</button>`).join('')}</div>
+    <p><span>House colours</span>new houses follow this palette</p><div class="grid" style="flex-wrap:wrap">${Object.entries(PALETTES).map(([k, cols]) => `<button class="act ${OWN.palette === k ? 'on' : ''}" data-pal="${k}" style="flex-direction:column;gap:3px"><span style="display:flex;gap:2px">${cols.slice(0, 5).map(c => `<i style="width:9px;height:14px;border-radius:2px;background:${c};display:block"></i>`).join('')}</span>${k[0].toUpperCase() + k.slice(1)}</button>`).join('')}</div>
+    <p><span>Town specialty</span>${OWN.spec ? SPECS[OWN.spec].label : 'none yet'}</p><div class="grid" style="flex-wrap:wrap">${Object.entries(SPECS).map(([k, s]) => `<button class="act ${OWN.spec === k ? 'on' : ''}" data-spec="${k}">${s.label}</button>`).join('')}</div>
+    <p class="tip">Shops that make it charge 15% more and wear a brass sign; visitors come asking for it.</p>
+    <p><span>Your festival</span>${FEST_THEMES[OWN.fest.theme].label}, day ${OWN.fest.day} of every season</p><div class="grid" style="flex-wrap:wrap">${Object.entries(FEST_THEMES).map(([k, f]) => `<button class="act ${OWN.fest.theme === k ? 'on' : ''}" data-fest="${k}">${f.label}</button>`).join('')}</div>
+    <div class="grid">${[1, 2, 3, 4, 5].map(d => `<button class="act ${OWN.fest.day === d ? 'on' : ''}" data-fday="${d}">Day ${d}</button>`).join('')}</div>
+    <p><span>Mayor</span>${OWN.mayor ? escH(OWN.mayor.name) : 'Tap a resident, then “Make mayor”'}</p>
+    <div class="grid"><button class="act" id="tcCard">Postcards</button><button class="act" id="tcVisit">Visit a friend's town</button></div>
+    <div id="tcVisitBox" style="display:none"><textarea id="tcCode" rows="3" placeholder="Paste a town code" style="width:100%;font-size:11px;background:rgba(0,0,0,.3);color:var(--paper);border:1px solid rgba(243,230,204,.2);border-radius:8px"></textarea><button class="act wide" id="tcGo">Visit (your town is kept safe)</button></div>`;
+  cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard;
+  const Q = s => cardEl.querySelector(s), all = (s, f) => cardEl.querySelectorAll(s).forEach(b => b.onclick = () => f(b));
+  Q('#tcName').onclick = () => { OWN.asked.town = 0; namePrompt('Rename your town', 'Shown on the welcome sign, the paper and postcards', townName(), suggestTown, v => { setTownName(v); townCard(); }); };
+  Q('#tcChron').onclick = chronicleCard; Q('#tcCard').onclick = () => { closeCard(); if (typeof albumCard === 'function') albumCard(); };
+  Q('#tcVisit').onclick = () => { Q('#tcVisitBox').style.display = 'block'; }; Q('#tcGo').onclick = () => visitTown(Q('#tcCode').value);
+  const crestSet = (k, v) => { OWN.crest[k] = v; paintCrest(); rebuildLaundry(); scheduleSave(); townCard(); };
+  all('[data-shape]', b => crestSet('shape', b.dataset.shape)); all('[data-c1]', b => crestSet('c1', b.dataset.c1)); all('[data-c2]', b => crestSet('c2', b.dataset.c2)); all('[data-em]', b => crestSet('emblem', b.dataset.em));
+  all('[data-pal]', b => { OWN.palette = OWN.palette === b.dataset.pal ? null : b.dataset.pal; scheduleSave(); say(OWN.palette ? 'New houses will use this palette' : 'Palette off: new houses pick freely'); townCard(); });
+  all('[data-spec]', b => { const was = OWN.spec; OWN.spec = b.dataset.spec; if (was !== OWN.spec) ownLog(`${SPECS[OWN.spec].label} becomes the town specialty`); businesses.forEach(x => SPECS[OWN.spec].types.includes(x.type) && refresh(x.cell)); scheduleSave(); townCard(); });
+  all('[data-fest]', b => { OWN.fest.theme = b.dataset.fest; scheduleSave(); townCard(); }); all('[data-fday]', b => { OWN.fest.day = +b.dataset.fday; scheduleSave(); townCard(); });
+}
+function chronicleCard() {
+  cardFor = {kind: 'chron'};
+  cardEl.innerHTML = `<div class="ch"><div><b>Chronicle of ${escH(townName())}</b><small>${OWN.chronicle.length} moments</small></div><button class="x">×</button></div>
+    ${OWN.chronicle.length ? OWN.chronicle.slice().reverse().map(e => `<p><span>Day ${e.d + 1}</span>${escH(e.t)}</p>`).join('') : '<p class="tip">Big moments are written down here as your town grows.</p>'}
+    <button class="act wide" id="chBack">Back to your town</button>`;
+  cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard; cardEl.querySelector('#chBack').onclick = townCard;
+}
+function ownLog(t) { OWN.chronicle.push({d: day, t}); if (OWN.chronicle.length > 200) OWN.chronicle.shift(); scheduleSave(); }
+/* ---- house colours (house card section) ---- */
+const DOORS = ['#4a2f22', '#2f5ea8', '#2f6a4a', '#8a2a2a', '#c9a33f', '#1e1e2a'], TILES = ['none', 'blue', 'green', 'yellow'];
+const TILE_TINT = {blue: '#eef4ff', green: '#eaf6e6', yellow: '#fff4dc'};
+function paintHTML(c) {
+  if (!c.floors) return ''; const p = c.paint || {}, sw = (k, cols, cur) => cols.map(col => `<button class="act" data-p${k}="${col}" style="min-width:30px;min-height:30px;padding:0;border-radius:50%;background:${col};box-shadow:${col === cur ? '0 0 0 3px #f0a35c' : 'inset 0 0 0 1px rgba(255,255,255,.25)'}"></button>`).join('');
+  return `<div class="shopsec"><h5>Colours</h5><p><span>Walls</span></p><div class="grid" style="flex-wrap:wrap">${sw('w', [...new Set([...WALLS, ...PALETTES.pastel])], p.w)}</div>
+    <p><span>Door</span></p><div class="grid" style="flex-wrap:wrap">${sw('d', DOORS, p.d)}</div>
+    <p><span>Tiles</span></p><div class="grid">${TILES.map(t => `<button class="act ${p.t === t ? 'on' : ''}" data-pt="${t}">${t === 'none' ? 'Plain' : t[0].toUpperCase() + t.slice(1)}</button>`).join('')}</div></div>`;
+}
+function wirePaint(c) {
+  const set = (k, v) => { c.paint = {...(c.paint || {}), [k]: v}; refresh(c); scheduleSave(); houseCard(c); };
+  cardEl.querySelectorAll('[data-pw]').forEach(b => b.onclick = () => set('w', b.dataset.pw)); cardEl.querySelectorAll('[data-pd]').forEach(b => b.onclick = () => set('d', b.dataset.pd)); cardEl.querySelectorAll('[data-pt]').forEach(b => b.onclick = () => set('t', b.dataset.pt));
+}
+{ const _hc = houseCard; houseCard = (c, p) => { _hc(c, p); if (!c?.floors || cardFor?.kind === 'name') return; const box_ = document.createElement('div'); box_.innerHTML = paintHTML(c); const res = cardEl.querySelector('.res'); res ? cardEl.insertBefore(box_, res) : cardEl.appendChild(box_); wirePaint(c); }; }
+/* ---- mayor ---- */
+{ const _pc = personCard; personCard = z => { _pc(z); if (z.role === 'child' || z.role === 'guest') return; const b = document.createElement('button'); b.className = 'act wide'; b.textContent = OWN.mayor === z ? 'Mayor of ' + townName() + ' ★' : 'Make mayor'; b.onclick = () => { if (OWN.mayor === z) return; if (OWN.mayor) { OWN.mayor.isMayor = false; OWN.mayor.notable = null; } OWN.mayor = z; z.isMayor = true; notables.mayor = z; z.notable = 'Mayor'; ownLog(`${z.name} becomes mayor`); toast(`${z.name} is the new mayor of ${townName()}`); buildPeopleMeshes(); scheduleSave(); personCard(z); }; cardEl.appendChild(b); }; }
+/* ---- letters, greetings ---- */
+function ownGreet(z) {
+  const R = Math.random(), pl = cells.filter(c => c.kind === 'plaza');
+  if (z.role === 'guest' && OWN.spec && R < .4) return `Where can I try the ${SPECS[OWN.spec].label.toLowerCase()}?`;
+  if (pl.length && R < .25) return `Meet you at ${plazaName(pick(Math.random, pl))}?`;
+  if (OWN.town && R < .4) return pick(Math.random, [`Lovely day in ${OWN.town}!`, `${OWN.town} is the best`, `Bom dia, ${OWN.town}!`]);
+  if (OWN.mayor && R < .5) return `Have you seen Mayor ${OWN.mayor.name.split(' ')[0]}?`;
+  return pick(z.R || Math.random, GREET);
+}
+{ const _le = lifeEvents; lifeEvents = L => { _le(L);
+  const recent = businesses.filter(b => (b.openedDay ?? -9) >= day - 2), adults = citizens.filter(z => z.role !== 'child' && z.role !== 'guest');
+  if (recent.length && adults.length && Math.random() < .7) { const b = pick(Math.random, recent), z = adults.sort((a, d) => (Math.abs(a.home.i - b.cell.i) + Math.abs(a.home.j - b.cell.j)) - (Math.abs(d.home.i - b.cell.i) + Math.abs(d.home.j - b.cell.j)))[0]; L.items.push(`✉ “Obrigada for ${b.name} on ${streetName(b.cell.i)}!” · ${z.name}`); }
+  else if (adults.length && Math.random() < .5) { const z = pick(Math.random, adults), n = typeof needOf === 'function' ? needOf(z) : null; if (n === 'food') L.items.push(`✉ “We still have no bakery near ${streetName(z.home.i)}.” · ${z.name}`); else if (n === 'cafe') L.items.push(`✉ “A café on ${streetName(z.home.i)} would be lovely.” · ${z.name}`); else L.items.push(`✉ “${pick(Math.random, ['I love living in', 'My grandchildren want to move to', 'Every morning I thank the mayor of'])} ${townName()}.” · ${z.name}`); }
+}; }
+/* ---- chronicle firsts, anniversaries, festival day ---- */
+let ownH = -1;
+function ownMarkExisting() { const F = OWN.firsts; businesses.forEach(b => F['shop:' + b.type] = 1); cells.forEach(c => { if (c.kind) F['kind:' + c.kind] = 1; if (c.floors >= 6) F.tall = 1; }); [25, 50, 75, 100, 150, 200].forEach(m => { if (citizens.length >= m) F['pop' + m] = 1; }); F.level = typeof townLevel === 'function' ? townLevel() : 1; }
+function ownTick() {
+  const h = Math.floor(hour); if (h === ownH) return; ownH = h; const F = OWN.firsts;
+  for (const b of businesses) { b.openedDay ??= day; if (!F['shop:' + b.type]) { F['shop:' + b.type] = 1; ownLog(`${b.name} opens on ${streetName(b.cell.i)}: the first ${BIZ[b.type].label.toLowerCase()} in town`); } }
+  for (const c of cells) { if (c.kind && !F['kind:' + c.kind] && ['church', 'bridge', 'plaza'].includes(c.kind)) { F['kind:' + c.kind] = 1; ownLog({church: 'The church bell rings for the first time', bridge: 'The first bridge crosses the river', plaza: 'The town gets its first square'}[c.kind]); } if (c.floors >= 6 && !F.tall) { F.tall = 1; ownLog(`A six-storey house rises on ${streetName(c.i)}`); } }
+  if (tram && !F.tram) { F.tram = 1; ownLog('The tram makes its first run'); } if (funi && !F.funi) { F.funi = 1; ownLog('The funicular opens'); }
+  const pop = citizens.filter(z => z.role !== 'guest').length; for (const m of [25, 50, 75, 100, 150, 200]) if (pop >= m && !F['pop' + m]) { F['pop' + m] = 1; ownLog(`${townName()} reaches ${m} residents`); }
+  const g = citizens.find(z => z.role === 'guest'); if (g && !F.guest) { F.guest = 1; ownLog(`First B&B guest: ${g.name}`); }
+  const L = typeof townLevel === 'function' ? townLevel() : 1; if (L > (F.level || 1)) { F.level = L; ownLog(`Town level ${L}`); }
+  if (h === 8 && day > OWN.founded && (day - OWN.founded) % 10 === 0 && !F['anniv' + day]) { F['anniv' + day] = 1; festNight = day; foundingTonight = true; ownLog(`Founding day: ${townName()} turns ${day - OWN.founded} days old`); toast(`Happy founding day, ${townName()}! Lanterns go up tonight`); }
+  else if (h === 8 && day % 5 === OWN.fest.day - 1 && !F['fest' + day] && festNight !== day) { F['fest' + day] = 1; festNight = day; foundingTonight = false; toast(`${FEST_THEMES[OWN.fest.theme].label} tonight! Lanterns go up at 19:30`); ownLog(`${FEST_THEMES[OWN.fest.theme].label} is celebrated`); }
+  if (h === 3) foundingTonight = false;
+  if (OWN.mayor && !citizens.includes(OWN.mayor)) { ownLog(`Mayor ${OWN.mayor.name} retires`); OWN.mayor = null; }
+  if (OWN.mayor && L >= 5 && !OWN.asked.statue && cells.some(c => c.kind === 'plaza') && !cells.some(c => c.statue)) { OWN.asked.statue = 1; const pl = cells.filter(c => c.kind === 'plaza');
+    cardFor = {kind: 'statue'}; cardEl.innerHTML = `<div class="ch"><div><b>A statue for the mayor</b><small>The residents want to honour Mayor ${escH(OWN.mayor.name)}</small></div><button class="x">×</button></div><p>Choose the square:</p><div class="grid" style="flex-direction:column">${pl.map(c => `<button class="act wide" data-st="${cellKey(c)}">${escH(plazaName(c))}</button>`).join('')}</div>`;
+    cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard; cardEl.querySelectorAll('[data-st]').forEach(b => b.onclick = () => placeStatue(cells[+b.dataset.st])); }
+  if (!OWN.town && !OWN.asked.town && quest && quest.k >= QUEST.length && h % 2 === 0) askTownName();
+  if (OWN.mayor && !OWN.mayor.isMayor) OWN.mayor.isMayor = true;
+}
+/* ---- identity everywhere ---- */
+function ownIdentity() { document.title = OWN.town ? `${OWN.town} · Tilt Town` : 'Tilt Town'; const h = document.querySelector('#title h1'); if (h) h.textContent = townName(); }
+function ownReset() { Object.assign(OWN, {town: null, founded: day, streets: {}, plazas: {}, crest: {shape: pick(Math.random, CREST_SHAPES), c1: pick(Math.random, CREST_COLS.slice(0, 6)), c2: '#efe3c8', emblem: pick(Math.random, EMBLEMS)}, palette: null, mayor: null, spec: null, fest: {theme: 'sjoao', day: 3}, chronicle: [], firsts: {}, asked: {}, _mark: 1}); paintCrest(); ownIdentity(); }
+function ownSave() { return {...OWN, mayor: OWN.mayor ? citizens.indexOf(OWN.mayor) : -1}; }
+function ownLoad(o) { if (!o) { ownReset(); return; } const m = o.mayor; Object.assign(OWN, {streets: {}, plazas: {}, chronicle: [], firsts: {}, asked: {}}, o, {mayor: null}); OWN._mayorIdx = m; paintCrest(); ownIdentity(); }
+function ownAfterCitizens() { const m = OWN._mayorIdx; OWN.mayor = m >= 0 ? citizens[m] || null : null; citizens.forEach(z => z.isMayor = z === OWN.mayor); delete OWN._mayorIdx; }
+/* ---- postcards: framed with name, crest and day ---- */
+function ownFrame(cv) {
+  const x = cv.getContext('2d'), W = cv.width, H = cv.height, bh = Math.round(H * .16);
+  x.fillStyle = 'rgba(28,20,16,.72)'; x.fillRect(0, H - bh, W, bh);
+  x.fillStyle = '#f3e6cc'; x.font = `400 ${Math.round(bh * .46)}px Caprasimo,Georgia,serif`; x.textBaseline = 'middle'; x.textAlign = 'left'; x.fillText(townName(), bh * .3, H - bh / 2);
+  x.font = `600 ${Math.round(bh * .26)}px 'Bricolage Grotesque',sans-serif`; x.textAlign = 'right'; x.fillText(`Day ${day + 1} · ${hhmm(hour)}`, W - bh * 1.35, H - bh / 2);
+  x.drawImage(crestCv, W - bh * 1.1, H - bh * .95, bh * .9, bh * .9);
+  x.strokeStyle = '#f3e6cc'; x.lineWidth = 4; x.strokeRect(6, 6, W - 12, H - 12);
+}
+/* ---- visiting a friend's town (read-only) ---- */
+let VISIT = null;
+const visitBar = document.createElement('div'); visitBar.id = 'visitBar'; visitBar.className = 'panel';
+visitBar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);top:calc(56px + env(safe-area-inset-top));z-index:8;display:none;align-items:center;gap:10px;padding:8px 12px;font:600 13px "Bricolage Grotesque",system-ui,sans-serif;color:var(--paper)';
+document.body.appendChild(visitBar);
+async function visitTown(code) {
+  try { const D = await fromCode(String(code).trim()); const home = serialize(); VISIT = {home}; loadTown(D);
+    visitBar.innerHTML = `<span>Visiting <b style="font:400 15px Caprasimo,Georgia,serif">${escH(townName())}</b></span><button class="act" id="vbBack" style="background:#f0a35c;color:#24170f">Back home</button>`; visitBar.style.display = 'flex';
+    document.body.classList.add('visiting'); visitBar.querySelector('#vbBack').onclick = leaveVisit; toast(`Welcome to ${townName()}! Have a look around`);
+  } catch (e) { toast('That code could not be read'); }
+}
+function leaveVisit() { if (!VISIT) return; const H = VISIT.home; VISIT = null; loadTown(H); visitBar.style.display = 'none'; document.body.classList.remove('visiting'); toast(`Back home in ${townName()}`); autosave(); }
+{ const _as = autosave; autosave = (...a) => { if (VISIT) return; return _as(...a); }; }
+{ const st = document.createElement('style'); st.textContent = `body.visiting #dkBuild,body.visiting #dkLand,body.visiting #quest,body.visiting #undoF{display:none!important}`; document.head.appendChild(st); }
+paintCrest();
+window.__own = {cit: () => citizens, personCard, townCode, cam: () => camera, lg: () => laundryG, cells: () => cells, refresh, ownDecor, plaqueFor, frontFace, OWN, townCard, chronicleCard, setTownName, streetCard, plazaCard, ownTick, ownLog, visitTown, leaveVisit, LBL, paintCrest, placeStatue};
+
 
 function assignBusinesses(R) {
   cells.forEach(c => { c.biz = null; });
@@ -1810,7 +2070,7 @@ window.__bnb = () => businesses.filter(b => b.type === 'bnb').map(b => b.name + 
 
 function simTick() {
   const t = now();
-  bnbTick();
+  bnbTick(); try { if (!VISIT) { if (OWN._mark) { ownMarkExisting(); delete OWN._mark; } ownTick(); } } catch (e) { console.warn(e); }
   for (const z of citizens) {
     if (z.role === 'child' || z.role === 'baby') continue;
     needsTick(z);
@@ -1837,7 +2097,7 @@ function simTick() {
     if (A.pos.distanceToSquared(B.pos) > .5) continue;
     const dur = .08 + A.R() * .1;
     for (const [P, Q] of [[A, B], [B, A]]) { P.talk = {wp: P.wp, goal: P.goal, with: Q}; P.state = 'talk'; P.until = t + dur; P.talkCD = t + 1.5; P.yaw = Math.atan2(Q.pos.x - P.pos.x, Q.pos.z - P.pos.z); }
-    say3(A, pick(A.R, GREET)); setTimeout(() => say3(B, pick(B.R, GREET)), 900);
+    say3(A, ownGreet(A)); setTimeout(() => say3(B, ownGreet(B)), 900);
   }
   // occupancy → lit windows
   for (const c of cells) {
@@ -2156,7 +2416,7 @@ function buildPeopleMeshes() {
     const x = lookX(z);
     hum.pal(i, HR.skin, z.skin); hum.pal(i, HR.shirt, z.shirt); hum.pal(i, HR.legs, z.skirt ? z.tights : z.pants); hum.pal(i, HR.shoes, z.shoeC); hum.pal(i, HR.hair, z.hairC);
     hum.pal(i, HR.hat, z.hatC); hum.pal(i, HR.bag, z.bagC); hum.pal(i, HR.white, PCOL.white); hum.pal(i, HR.skirt, z.skirtC || z.pants); hum.pal(i, HR.fore, z.shortSleeve ? z.skin : z.shirt);
-    hum.pal(i, HR.accent, x.accent); hum.pal(i, HR.dark, PCOL.dark); hum.pal(i, HR.lips, z.skin.clone().lerp(PCOL.lips, .55).multiplyScalar(.8)); hum.pal(i, HR.wood, PCOL.wood); hum.pal(i, HR.umb, z.umbC); hum.pal(i, HR.gold, PCOL.gold);
+    hum.pal(i, HR.accent, z.isMayor ? new THREE.Color(OWN.crest.c1) : x.accent); hum.pal(i, HR.dark, PCOL.dark); hum.pal(i, HR.lips, z.skin.clone().lerp(PCOL.lips, .55).multiplyScalar(.8)); hum.pal(i, HR.wood, PCOL.wood); hum.pal(i, HR.umb, z.umbC); hum.pal(i, HR.gold, PCOL.gold);
   });
   hum.palDone();
 }
@@ -2179,6 +2439,7 @@ function poseAll(t) {
   const st = PEOPLE_STATS; st.near = st.mid = st.far = 0;
   // waving: occasional greeting between passers-by (scan a few people per frame)
   if (citizens.length) for (let k = 0; k < 6; k++) { const z = citizens[waveScan++ % citizens.length]; if (!z.an || z.state !== 'go' || !z.chatty || z.an.waveCD > t) continue; for (const o of citizens) { if (o === z || o.state === 'inside' || o.role === 'child') continue; if (Math.abs(o.pos.x - z.pos.x) + Math.abs(o.pos.z - z.pos.z) < 1.3) { if (Math.random() < .35) { z.an.waveT = t; z.an.lookAt = o; z.an.lookUntil = t + 1.6; } z.an.waveCD = t + 6 + Math.random() * 8; break; } } }
+  { const m = OWN.mayor; if (m && m.an && m.state === 'go' && !(m.an.mwCD > t)) { m.an.waveT = t; m.an.lookAt = {pos: camera.position}; m.an.lookUntil = t + 1.6; m.an.mwCD = t + 7; } }
   citizens.forEach((z, i) => {
     const an = z.an;
     if (z.state === 'inside') { // fade out where they went in, then vanish
@@ -2766,7 +3027,7 @@ function shopSection(c, info = '') {
     const rows = info.replace(/<p><span>(Shop|Hours|Visits|Money)<\/span>.*?<\/p>/g, '');
     head = `<div class="shead"><i style="background-image:url(${ICON_ATLAS.url});background-position:${iconPos(Math.max(0, SHOP_ORDER.indexOf(b.type)))}"></i><div><b>${b.name}</b><small>${BIZ[b.type].label} · ${open ? 'Open now' : 'Closed now'} · ${hrs}</small></div><span class="badge ${tone}">${st}</span></div>
       <div class="sstats"><div><b>${euro(b.rev)}</b><small>today</small></div><div><b>${euro(b.cash)}</b><small>cash</small></div><div><b>${b.visits}</b><small>visits</small></div></div>${b.type === 'bnb' ? bnbInfo(b) : ''}${rows}${(() => { const sy = synergy(b); return `<p><span>Location</span>${sy.m >= 1 ? '+' : '−'}${Math.round(Math.abs(sy.m - 1) * 100)}% sales</p>${sy.why.length ? `<p class="tip">${sy.why.map(([t, p]) => `${t} ${p}`).join(' · ')}</p>` : `<p class="tip">Plazas, the river and a mix of shop types nearby boost sales. Too many of the same type hurts.</p>`}`; })()}${(c.bizLvl || 0) < 2 ? `<button class="act wide${UPG[c.bizLvl || 0].cost > funds ? ' poor' : ''}" data-sa="upg">${UPG[c.bizLvl || 0].label} · ${euro(UPG[c.bizLvl || 0].cost)} · +12% sales</button>` : `<p class="tip">Fully upgraded: terrace and second counter.</p>`}`; }
-  return `<div class="shopsec"><h5>Shop</h5>${head}<div class="grid"><button class="act" data-sa="change">${c.chgOpen ? 'Cancel' : 'Change type'}</button><button class="act danger" data-sa="close">${closing ? `Tap again · refund ${euro(Math.round(COST.shop * .3))}` : 'Close shop'}</button></div>${c.chgOpen ? `${grid(CHANGE_COST(), c.biz)}<p class="tip">Refitting costs half a new shop. The name, cash and staff stay.</p>` : ''}</div>`;
+  return `<div class="shopsec"><h5>Shop</h5>${head}<div class="grid"><button class="act" data-sa="ren">✎ Rename</button><button class="act" data-sa="change">${c.chgOpen ? 'Cancel' : 'Change type'}</button><button class="act danger" data-sa="close">${closing ? `Tap again · refund ${euro(Math.round(COST.shop * .3))}` : 'Close shop'}</button></div>${c.chgOpen ? `${grid(CHANGE_COST(), c.biz)}<p class="tip">Refitting costs half a new shop. The name, cash and staff stay.</p>` : ''}</div>`;
 }
 function hireKeeper(c) {
   const b2 = c.bizObj, pool = citizens.filter(z => z.role === 'worker' || z.role === 'retiree'); if (!b2 || !pool.length) return;
@@ -2775,6 +3036,7 @@ function hireKeeper(c) {
 }
 function wireShopSection(c) {
   cardEl.querySelectorAll('[data-sa]').forEach(bt => bt.onclick = () => {
+    if (bt.dataset.sa === 'ren') { namePrompt('Rename the shop', 'Painted on the shop front', c.bizName || '', () => pick(Math.random, BIZ[c.biz].names), v => { c.bizName = v; const b = businesses.find(o => o.cell === c); if (b) b.name = v; lblRefresh(); refresh(c); houseCard(c); }); return; }
     if (bt.dataset.sa === 'upg') { const u = UPG[c.bizLvl || 0]; if (!u) return; snapshot(); if (!spend(u.cost, 'an upgrade')) { undoStack.pop(); return; } c.bizLvl = (c.bizLvl || 0) + 1; refresh(c); pop(c); reactAt(c, '✨'); say(`${u.label.replace('Add a', 'New')} for ${c.bizObj?.name || 'the shop'}`); houseCard(c); return; }
     if (bt.dataset.sa === 'change') { c.chgOpen = !c.chgOpen; c.closeAsk = 0; houseCard(c); return; }
     if (!(performance.now() - (c.closeAsk || 0) < 4000)) { c.closeAsk = performance.now(); c.chgOpen = false; houseCard(c); return; }
@@ -3117,7 +3379,7 @@ function bunting(g, lit, a, b, k, R) {
   g.push(paint(new THREE.TubeGeometry(curve, 10, .008, 3), '#2a2622'));
   const tri = new THREE.Shape([new THREE.Vector2(-.06, 0), new THREE.Vector2(.06, 0), new THREE.Vector2(0, -.13)]);
   const dir = b.clone().sub(a).normalize(), ry = Math.atan2(dir.x, dir.z) + Math.PI / 2;
-  for (let u = .06; u < .95; u += .07) { const p = curve.getPoint(u); const fg = paint(new THREE.ExtrudeGeometry(tri, {depth: .005, bevelEnabled: false}), pick(R, ['#d94f3d', '#e8c34a', '#3f8a5a', '#2f6aa8', '#f4f0e8', '#e07a3a'])); fg.applyMatrix4(tr(p.x, p.y, p.z, ry)); g.push(fg); }
+  for (let u = .06; u < .95; u += .07) { const p = curve.getPoint(u); const fg = paint(new THREE.ExtrudeGeometry(tri, {depth: .005, bevelEnabled: false}), pick(R, festColors())); fg.applyMatrix4(tr(p.x, p.y, p.z, ry)); g.push(fg); }
   for (let u = .2; u < .9; u += .3) { const p = curve.getPoint(u); lit.push(setAttr(paint(new THREE.SphereGeometry(.07, 8, 6), '#fff').applyMatrix4(mul(tr(p.x, p.y - .12, p.z), new THREE.Matrix4().makeScale(1, 1.3, 1))), 'lthr', .05)); }
 }
 
@@ -3223,7 +3485,7 @@ let requests = [], reqDone = [];
 const REQ_KINDS = ['shop', 'shop', 'shop', 'plaza', 'lamp', 'tree', 'homes', 'bridge'];
 function makeRequest() {
   const adults = citizens.filter(z => z.role !== 'child' && z.role !== 'baby' && !requests.some(r => r.z === z)); if (!adults.length) return;
-  const z = pick(Math.random, adults), kind = pick(Math.random, REQ_KINDS), st = STREETS[z.home.i % STREETS.length];
+  const z = pick(Math.random, adults), kind = pick(Math.random, REQ_KINDS), st = streetName(z.home.i);
   const near = (pred, d) => cells.some(c => pred(c) && Math.abs(c.i - z.home.i) + Math.abs(c.j - z.home.j) <= d);
   let r = null;
   if (kind === 'shop') { const type = pick(Math.random, Object.keys(BIZ).filter(t => !near(c => c.biz === t, 4))); if (type) r = {text: `${z.name.split(' ')[0]} wants a ${BIZ[type].label.toLowerCase()} near ${st}`, test: () => near(c => c.biz === type && c.bizObj, 4), reward: 220}; }
@@ -3262,7 +3524,7 @@ paperEl.onclick = () => paperCard();
 function paperCard() {
   cardFor = {kind: 'paper'};
   const ed = paper.at(-1);
-  cardEl.innerHTML = `<div class="ch"><div><b>O Jornal de Tilt</b><small>${ed ? `Day ${ed.day + 1} edition` : 'First edition tomorrow morning'}</small></div><button class="x">×</button></div>
+  cardEl.innerHTML = `<div class="ch"><div><b>O Jornal de ${escH(townName())}</b><small>${ed ? `Day ${ed.day + 1} edition` : 'First edition tomorrow morning'}</small></div><button class="x">×</button></div>
     ${ed ? ed.items.map((t, k) => `<p class="${k ? '' : 'lead'}">${t}</p>`).join('') : '<p>The printing press is warming up. Check back after midnight.</p>'}`;
   cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard;
 }
@@ -3276,7 +3538,7 @@ function lifeEvents(L) {
     const homes = cells.filter(c => (c.res || []).filter(z => z.role !== 'child' && z.role !== 'baby' && z.age < 45).length >= 2);
     if (homes.length) { const h = pick(Math.random, homes), par = h.res.find(z => z.role !== 'child'), male = Math.random() < .5, n = Math.floor(Math.random() * 1e9);
       const z = {id: citizens.length, male, name: `${pick(Math.random, male ? FIRST_M : FIRST_F)} ${par.name.split(' ')[1]}`, home: h, seedN: n, R: rng(n), pos: new THREE.Vector3(), yaw: 0, state: 'inside', where: {type: 'home'}, wp: [], lane: 0, phase: 0, talkCD: 0, carry: false, role: 'baby', age: 0, parent: par, wallet: 0, plan: [{at: 0, act: 'home'}], dog: null};
-      makeLook(z, z.R); citizens.push(z); h.res.push(z); L.items.push(`A baby! ${z.name.split(' ')[0]} is born on ${STREETS[h.i % STREETS.length]}`); }
+      makeLook(z, z.R); citizens.push(z); h.res.push(z); L.items.push(`A baby! ${z.name.split(' ')[0]} is born on ${streetName(h.i)}`); }
   }
 }
 function writePaper(L) {
@@ -3310,16 +3572,16 @@ function colHex(c) { return c ? '#' + c.getHexString() : null; }
 function serialize() {
   const idx = c => c ? c.i * N + c.j : -1;
   return {v: 1, day, hour, funds, preset: PRESETS.indexOf(preset), weather, festNight, unlocked, tram: tram && {cells: tram.cells}, funi: funi && {a: funi.a, b: funi.b, rise: funi.rise, k: funi.k}, ledger: {...ledger, closed: [], moved: []}, paper: paper.slice(-3),
-    cells: cells.map(c => [c.lvl, c.water ? 1 : 0, c.floors, c.kind || 0, c.biz || 0, c.bizName || 0, c.seed, c.owned === false ? 0 : 1, Math.round((c.cond ?? 1) * 100) / 100, c.style || 0, c.broken ? 1 : 0, c.statue ? 1 : 0, c.yard && c.yard.length ? c.yard.join(',') : 0, c.bizLvl || 0, c.dist || 0]),
-    meta: {stars, landBought, quayWalls, scen: {...scen}, notables: Object.fromEntries(Object.entries(notables).map(([k, z]) => [k, citizens.indexOf(z)])), stories: stories.map(s => ({id: s.id, zi: citizens.indexOf(s.z), step: s.step, done: s.done})), nata: nataCell ? nataCell.i * N + nataCell.j : -1, stage: stageCell ? stageCell.i * N + stageCell.j : -1},
+    cells: cells.map(c => [c.lvl, c.water ? 1 : 0, c.floors, c.kind || 0, c.biz || 0, c.bizName || 0, c.seed, c.owned === false ? 0 : 1, Math.round((c.cond ?? 1) * 100) / 100, c.style || 0, c.broken ? 1 : 0, c.statue ? 1 : 0, c.yard && c.yard.length ? c.yard.join(',') : 0, c.bizLvl || 0, c.dist || 0, c.paint || 0]),
+    meta: {own: ownSave(), stars, landBought, quayWalls, scen: {...scen}, notables: Object.fromEntries(Object.entries(notables).map(([k, z]) => [k, citizens.indexOf(z)])), stories: stories.map(s => ({id: s.id, zi: citizens.indexOf(s.z), step: s.step, done: s.done})), nata: nataCell ? nataCell.i * N + nataCell.j : -1, stage: stageCell ? stageCell.i * N + stageCell.j : -1},
     biz: businesses.map(b => [idx(b.cell), Math.round(b.cash), Math.round(b.rev), b.hist, b.visits]),
     cit: citizens.map(z => ({n: z.name, m: z.male ? 1 : 0, r: z.role, a: z.age, h: idx(z.home), w: z.work && z.work !== 'away' ? idx(z.work.cell) : -1, p: z.parent ? citizens.indexOf(z.parent) : -1, wl: Math.round(z.wallet || 0), s: z.seedN || 1, ch: z.chatty ? 1 : 0, d: z.dog ? [colHex(z.dog.c), z.dog.s] : 0, f: z.fav ? idx(z.fav.cell) : -1,
       L: [z.s, z.bw, colHex(z.skin), colHex(z.shirt), colHex(z.pants), colHex(z.hairC), z.hair, z.beard ? 1 : 0, z.hat, colHex(z.hatC), z.skirt ? 1 : 0, colHex(z.skirtC), colHex(z.tights), z.shortSleeve ? 1 : 0, colHex(z.shoeC), z.lean, z.cane ? 1 : 0, z.apron ? 1 : 0, colHex(z.bagC), colHex(z.umbC)]}))};
 }
 function loadTown(D) {
   cells.forEach(c => { if (c.tmesh) terrainG.remove(c.tmesh); if (c.obj) objG.remove(c.obj); }); businesses = []; closeCard();
-  cells = D.cells.map((a, k) => ({i: Math.floor(k / N), j: k % N, lvl: a[0], water: !!a[1], floors: a[2], kind: a[3] || null, biz: a[4] || null, bizName: a[5] || null, seed: a[6], tmesh: null, obj: null, glows: [], owned: a[7] !== 0, cond: a[8] ?? 1, style: a[9] || null, broken: !!a[10], statue: !!a[11], yard: a[12] ? String(a[12]).split(',') : [], bizLvl: a[13] || 0, dist: a[14] || null}));
-  const M_ = D.meta || {}; stars = Math.max(stars, M_.stars || 0); landBought = M_.landBought || 0; quayWalls = !!M_.quayWalls; scen = M_.scen || {id: 'free'}; nataCell = M_.nata >= 0 ? cells[M_.nata] : null; stageCell = M_.stage >= 0 ? cells[M_.stage] : null; events = []; resetDayStats();
+  cells = D.cells.map((a, k) => ({i: Math.floor(k / N), j: k % N, lvl: a[0], water: !!a[1], floors: a[2], kind: a[3] || null, biz: a[4] || null, bizName: a[5] || null, seed: a[6], tmesh: null, obj: null, glows: [], owned: a[7] !== 0, cond: a[8] ?? 1, style: a[9] || null, broken: !!a[10], statue: !!a[11], yard: a[12] ? String(a[12]).split(',') : [], bizLvl: a[13] || 0, dist: a[14] || null, paint: a[15] || null}));
+  const M_ = D.meta || {}; ownLoad(M_.own); stars = Math.max(stars, M_.stars || 0); landBought = M_.landBought || 0; quayWalls = !!M_.quayWalls; scen = M_.scen || {id: 'free'}; nataCell = M_.nata >= 0 ? cells[M_.nata] : null; stageCell = M_.stage >= 0 ? cells[M_.stage] : null; events = []; resetDayStats();
   day = D.day; hour = D.hour; funds = D.funds; cheatApply(); preset = PRESETS[D.preset] || PRESETS[0]; weather = D.weather || 'auto'; festNight = D.festNight ?? -1; unlocked = D.unlocked || unlocked; ledger = D.ledger || ledger; paper = D.paper || [];
   tram = D.tram ? {...D.tram, t: 0, dir: 1, wait: 0} : null; funi = D.funi ? {...D.funi, t: 0, dir: 1, wait: 0} : null;
   cells.forEach(c => { rebuildTerrain(c); rebuildObj(c); }); rebuildGlows(); rebuildLaundry();
@@ -3339,7 +3601,7 @@ function loadTown(D) {
   citizens.forEach(z => { z.plan = makePlan(z); z.step = null; });
   notables = {}; for (const [k, zi] of Object.entries(M_.notables || {})) { const z = citizens[zi]; if (!z) continue; notables[k] = z; z.notable = {mayor: 'Mayor', gossip: 'Town gossip', painter: 'Painter'}[k]; if (k === 'painter') z.plan = [{at: 0, act: 'home'}, {at: 9.5, act: 'paint'}, {at: 16, act: 'cafe'}, {at: 18, act: 'home'}]; }
   stories = (M_.stories || []).filter(s => citizens[s.zi] && STORY_DEFS[s.id]).map(s => Object.assign(STORY_DEFS[s.id](citizens[s.zi]), {step: s.step, done: s.done}));
-  computeMood(); buildPeopleMeshes(); warmStart(); rebuildWaterFx(); placeCats(); updateEco(); updateReqChip(); computeTraits(); makeGoals(); updateScenChip(); rebuildLaundry();
+  ownAfterCitizens(); computeMood(); buildPeopleMeshes(); warmStart(); rebuildWaterFx(); placeCats(); updateEco(); updateReqChip(); computeTraits(); makeGoals(); updateScenChip(); rebuildLaundry();
   [...presetsEl.children].forEach((x, k) => x.classList.toggle('on', PRESETS[k] === preset));
 }
 let saveT = 0;
@@ -3601,7 +3863,7 @@ function computeTraits() {
   if (cells.filter(c => c.kind === 'bridge').length >= 3 && cells.filter(c => c.kind === 'lamp' && DIRS.some(([dx, dz]) => cellAt(c.i + dx, c.j + dz)?.water)).length >= 5) traits.add('river');
   if (cells.some(c => c.kind === 'church') && cnt('books') && cnt('cinema')) traits.add('culture');
 }
-const priceMult = t => (traits.has('cafe') && ['cafe', 'tasca', 'winebar'].includes(t) ? 1.15 : 1) * (traits.has('market') && ['grocer', 'fish', 'florist'].includes(t) ? 1.1 : 1) * (marketOn && ['grocer', 'fish', 'florist'].includes(t) ? 1.5 : 1);
+const priceMult = t => ownSpecMult(t) * (traits.has('cafe') && ['cafe', 'tasca', 'winebar'].includes(t) ? 1.15 : 1) * (traits.has('market') && ['grocer', 'fish', 'florist'].includes(t) ? 1.1 : 1) * (marketOn && ['grocer', 'fish', 'florist'].includes(t) ? 1.5 : 1);
 
 /* ---- notables & storylines ---- */
 function pickNotables() {
@@ -3618,7 +3880,7 @@ const isNotable = z => !!z.notable;
 const STORY_DEFS = {
   nata: z => ({id: 'nata', z, title: `${z.name.split(' ')[0]}'s pastry dream`, step: 0, steps: [
     {text: `Cheer ${z.name.split(' ')[0]} up: get her mood above 60%`, test: () => joyOf(z) > .6},
-    {text: `Open a bakery within 3 streets of her home on ${STREETS[z.home.i % STREETS.length]}`, test: () => businesses.some(b => b.type === 'bakery' && Math.abs(b.cell.i - z.home.i) + Math.abs(b.cell.j - z.home.j) <= 3)},
+    {text: `Open a bakery within 3 streets of her home on ${streetName(z.home.i)}`, test: () => businesses.some(b => b.type === 'bakery' && Math.abs(b.cell.i - z.home.i) + Math.abs(b.cell.j - z.home.j) <= 3)},
   ], doneText: `Pastéis da ${z.name.split(' ')[0]} stall opened: +€40 a day and happier neighbours`, reward() { const b = businesses.find(b => b.type === 'bakery' && Math.abs(b.cell.i - z.home.i) + Math.abs(b.cell.j - z.home.j) <= 3); if (b) { z.role = 'staff'; z.work = b; z.apron = true; z.plan = makePlan(z); z.step = null; } nataCell = b ? b.street : z.home; rebuildLaundry(); buildPeopleMeshes(); }}),
   band: z => ({id: 'band', z, title: `${z.name.split(' ')[0]}'s band`, step: 0, steps: [
     {text: 'Build a plaza where the band can play', test: () => cells.some(c => c.kind === 'plaza')},
@@ -3682,8 +3944,8 @@ function scoreShot() {
   return {stars: sec ? 3 : st, parts, secret: sec?.id, title: sec ? sec.title : parts.length ? parts.map(p => p[0].toUpperCase() + p.slice(1)).join(' · ') : 'A quiet corner'};
 }
 function grabPostcard() {
-  const sc = scoreShot(), src = renderer.domElement, cv = document.createElement('canvas'); cv.width = 320; cv.height = Math.round(320 * src.height / src.width);
-  cv.getContext('2d').drawImage(src, 0, 0, cv.width, cv.height);
+  const sc = scoreShot(), src = renderer.domElement, cv = document.createElement('canvas'); cv.width = 480; cv.height = Math.round(480 * src.height / src.width);
+  cv.getContext('2d').drawImage(src, 0, 0, cv.width, cv.height); try { ownFrame(cv); } catch (e) { }
   const card = {img: cv.toDataURL('image/jpeg', .72), ...sc, day, at: hhmm(hour)};
   album.unshift(card); if (album.length > 14) album.length = 14;
   try { localStorage.setItem(ALBUM_KEY, JSON.stringify(album)); } catch (e) { album.length = Math.max(1, album.length - 4); }
@@ -3694,7 +3956,7 @@ function albumCard() {
   cardFor = {kind: 'album'};
   cardEl.innerHTML = `<div class="ch"><div><b>Postcard album</b><small>${album.length} saved · secrets ${album.filter(p => p.secret).length}/${SECRETS.length}</small></div><button class="x">×</button></div>
     <p class="tip">In photo mode, tap Snap. Golden hour, night lights, festivals, crowds, landmarks and weather score stars. Some secret shots wait to be found.</p>
-    <div class="album">${album.map(p => `<figure><img src="${p.img}"><figcaption>${'★'.repeat(p.stars)} ${p.title}</figcaption></figure>`).join('')}${SECRETS.filter(s => !album.some(p => p.secret === s.id)).map(() => '<figure class="sec"><div>?</div><figcaption>Secret postcard</figcaption></figure>').join('')}</div>`;
+    <div class="album">${album.map(p => `<figure><img src="${p.img}"><figcaption>${'★'.repeat(p.stars)} ${p.title} <a download="${escH(townName())} day ${p.day + 1}.jpg" href="${p.img}" style="color:#f0a35c">Save</a></figcaption></figure>`).join('')}${SECRETS.filter(s => !album.some(p => p.secret === s.id)).map(() => '<figure class="sec"><div>?</div><figcaption>Secret postcard</figcaption></figure>').join('')}</div>`;
   cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard;
 }
 
@@ -3785,6 +4047,7 @@ function connectStreets() {
   }
 }
 function generate(seed, opt = {}) {
+  try { ownReset(); OWN._mark = 1; } catch (e) { }
   cells.forEach(c => { if (c.tmesh) terrainG.remove(c.tmesh); if (c.obj) objG.remove(c.obj); }); businesses = []; tram = null; funi = null;
   cells = [];
   const R = rng(seed), ph = R() * 6, amp = 2 + R() * 1.5, mid = N / 2 - .5 + (R() - .5) * 2;
@@ -4157,7 +4420,7 @@ function storefront(c, em, sw, R, A) {
   const bx = (arr, w, h, d, col, x, y, z, ry, rx, rz) => arr.push(box(w, h, d, col, at(x, y, z, ry, rx, rz)));
   const cy = (arr, r1, r2, h, col, x, y, z, seg = 8, ry, rx, rz) => arr.push(cyl(r1, r2, h, col, at(x, y, z, ry, rx, rz), seg));
   const sp = (arr, r, col, x, y, z, sx = 1, sy = 1, sz = 1, seg = 6) => arr.push(paint(new THREE.SphereGeometry(r, seg, Math.max(3, seg - 2)), col).applyMatrix4(mul(at(x, y, z), new THREE.Matrix4().makeScale(sx, sy, sz))));
-  const {body, plain, shopGlass, glows, flutter, signG, lit, tile} = A;
+  const {body, plain, shopGlass, glows, flutter, signG, lit, tile, lbls = []} = A, shopNm = c.bizName || B.label, sKey = 'shop:' + (c.i * N + c.j);
   const dk = new THREE.Color(k1).multiplyScalar(.55), F = -.46; // floor level in this frame
   const glow = (x, y, z, thr = -1) => { const v = new THREE.Vector3(x, y, z).applyMatrix4(em); v.thr = thr; glows.push(v); };
   const lamp = (x, y, thr = -1, col = '#2a2622') => { bx(plain, .03, .03, .14, col, x, y + .06, .07); cy(plain, .045, .03, .1, col, x, y, .14, 6); lit.push(setAttr(box(.05, .06, .05, '#fff', at(x, y - .01, .14)), 'lthr', thr)); glow(x, y - .05, .2, thr); };
@@ -4182,7 +4445,7 @@ function storefront(c, em, sw, R, A) {
   };
   const fascia = (col, letter, y = .47, w = sw + .14, h = .15) => {
     bx(body, w, h, .06, col, 0, y, .02); bx(plain, w + .04, .03, .09, dk, 0, y + h / 2 + .01, .03); bx(plain, w + .04, .025, .08, dk, 0, y - h / 2 - .01, .03);
-    let x = -w * .36; const n = 5 + Math.floor(R() * 4); for (let q = 0; q < n && x < w * .36; q++) { const lw = .03 + R() * .045; bx(plain, lw, h * .45, .012, letter, x + lw / 2, y, .056); x += lw + .02 + (R() < .2 ? .04 : 0); }
+    lbls.push(labelGeo(sKey, shopNm, {bg: hex(col), fg: hex(letter)}, w * .97, h * .9).applyMatrix4(at(0, y, .052)));
   };
   const stripedAwning = (aw, depth, tilt, n, y = .36, scallop = true) => {
     for (let s = 0; s < n; s++) plain.push(box(aw / n, .04, depth, s % 2 ? k2 : k1, at(-aw / 2 + aw / n * (s + .5), y, depth / 2 - .02, 0, tilt)));
@@ -4288,6 +4551,7 @@ function storefront(c, em, sw, R, A) {
       bx(plain, .08, .05, .01, '#efe3c8', ddx, F + .8, .05); bx(plain, .04, .025, .012, '#2a2622', ddx, F + .8, .052); // house number
       bx(plain, .1, .07, .008, '#2f5ea8', ddx - L * .25, .12, .015); bx(plain, .06, .02, .01, '#f4f4f4', ddx - L * .25, .12, .02); // blue "AL" licence plate
       bx(plain, .12, .05, .008, '#c9a33f', ddx - L * .25, .02, .015); // brass "rooms" plate
+      bx(plain, .5, .14, .02, '#1f3f8a', wxp, .36, .02); lbls.push(labelGeo(sKey, shopNm, {kind: 'azul'}, .48, .12).applyMatrix4(at(wxp, .36, .032)));
       lamp(ddx - L * .25, .3, .1, '#1e1e1e');
       for (const s of [-1, 1]) { const px = ddx + s * .27; cy(plain, .07, .05, .12, '#8a4a38', px, F + .06, .14, 8); cy(plain, .008, .008, .16, '#5a4232', px, F + .2, .14, 4); sp(plain, .085, pick(R, ['#3f6a2a', '#4f7a32']), px, F + .34, .14, 1, 1.15, 1, 7); }
       bx(body, .5, .5, .06, trim, wxp, -.02, .015); shopGlass.push(box(.38, .38, .02, '#fff', at(wxp, -.02, .035))); bx(plain, .02, .38, .03, trim, wxp, -.02, .05); bx(plain, .38, .02, .03, trim, wxp, .04, .05);
@@ -4305,9 +4569,9 @@ function storefront(c, em, sw, R, A) {
       surround(dk, .36); glass(gx, -.02, gw, .58, 2, 1); door(dx, k1); windowGoods(type, em, sw, R, plain); stripedAwning(sw + .2, .55, .38, 7); fascia(dk, '#e8d8a8'); swingSign(-L * (sw / 2 + .06)); plate(dx); out.shop = {m: at(gx, .27, .07), sw: gw};
     }
   }
+  if (OWN.spec && SPECS[OWN.spec].types.includes(type)) { const xb = -L * sw * .34, bm = at(xb, F + .2, .36, 0, -.18); for (const s_ of [-1, 1]) plain.push(box(.025, .42, .025, '#4a3a2a', mul(bm, tr(s_ * .2, 0, -.02)))); plain.push(box(.46, .2, .02, '#2a2622', mul(bm, tr(0, .08, 0)))); lbls.push(labelGeo('spec', '★ ' + SPECS[OWN.spec].label, {kind: 'brass'}, .44, .1).applyMatrix4(mul(bm, tr(0, .1, .03)))); }
   return out;
 }
-
 /* hanging bracket sign for a shopfront (em = facade frame, x along wall, z out) */
 function hangingSign(type, em, x0, plain, sign) {
   const [col] = SHOPCOL[type] || ['#7a3a2a'];
@@ -4835,17 +5099,18 @@ function refresh(c, nbToo) {
 }
 function apply(c) {
   if (!c) return;
+  if (VISIT && tool !== 'look') { say('Visiting: look around only'); return; }
   if (c.owned === false && !c.water) return landCard(c);
   if (!['look', 'shop', 'landmark'].includes(tool)) snapshot();
   if (tool === 'landmark') return landmarkCard(c);
-  if (tool === 'look') { if (c.floors > 0) houseCard(c, false); else if (c.broken) { selectCell(c); cardFor = {kind: 'lamp'}; cardEl.innerHTML = `<div class="ch"><div><b>Broken street lamp</b><small>Knocked out by the storm</small></div><button class="x">×</button></div><button class="act wide" id="fixL">Repair for €20</button>`; cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard; document.getElementById('fixL').onclick = () => { if (!spend(20, 'a repair')) return; c.broken = false; rebuildObj(c); rebuildGlows(); closeCard(); }; } else closeCard(); return; }
+  if (tool === 'look') { if (c.floors > 0) houseCard(c, false); else if (c.broken) { selectCell(c); cardFor = {kind: 'lamp'}; cardEl.innerHTML = `<div class="ch"><div><b>Broken street lamp</b><small>Knocked out by the storm</small></div><button class="x">×</button></div><button class="act wide" id="fixL">Repair for €20</button>`; cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard; document.getElementById('fixL').onclick = () => { if (!spend(20, 'a repair')) return; c.broken = false; rebuildObj(c); rebuildGlows(); closeCard(); }; } else if (c.kind === 'plaza') plazaCard(c); else if (!c.water && !c.kind && walkable(c)) streetCard(c); else closeCard(); return; }
   if (tool === 'shop') { if (!c.floors) { say('Tap a house'); return; } houseCard(c); return; }
-  if (tool === 'plaza') { if (c.water || c.floors > 0) { say('Needs an empty street'); return; } if (c.kind !== 'plaza' && !spend(COST.plaza, 'a plaza')) return; if (c.kind === 'plaza') refund(COST.plaza); c.kind = c.kind === 'plaza' ? null : 'plaza'; refresh(c); if (c.kind) { pop(c); dust(c); } return; }
+  if (tool === 'plaza') { if (c.water || c.floors > 0) { say('Needs an empty street'); return; } if (c.kind !== 'plaza' && !spend(COST.plaza, 'a plaza')) return; if (c.kind === 'plaza') refund(COST.plaza); c.kind = c.kind === 'plaza' ? null : 'plaza'; refresh(c); if (c.kind) { pop(c); dust(c); if (!OWN.plazas[cellKey(c)]) setTimeout(() => plazaCard(c), 600); } return; }
   if (tool === 'house') {
     if (c.water) { if (c.kind !== 'bridge' && !spend(COST.bridge, 'a bridge')) return; if (c.kind === 'bridge') refund(COST.bridge); c.kind = c.kind === 'bridge' ? null : 'bridge'; refresh(c); if (c.kind) { pop(c); dust(c); } return; }
     if (c.floors >= MAXF) { say('Tall enough!'); return; }
     if (!spend(COST.house, 'a floor')) return;
-    const was = c.floors; c.kind = null; c.floors++; if (!was) c.cond = 1; dayStats.floors++; refresh(c, was === 0); pop(c); dust(c); checkGoals();
+    const was = c.floors; c.kind = null; c.floors++; if (!was) { c.cond = 1; c.paint = OWN.palette ? {w: pick(Math.random, PALETTES[OWN.palette])} : null; } dayStats.floors++; refresh(c, was === 0); pop(c); dust(c); checkGoals();
   } else if (tool === 'tree' || tool === 'lamp') {
     if (c.water) return;
     if (c.floors > 0) { c.yard ||= []; if (c.yard.length >= 2) { say('This garden is full'); return; } if (!spend(COST[tool], `a ${tool}`)) return; c.yard.push(tool); refresh(c); pop(c); dust(c); return; }
@@ -5077,6 +5342,7 @@ function refreshItems() {
 // more tray
 { const g = document.createElement('div'); g.className = 'tgrid'; trayMore.appendChild(g);
   const add = (label, icon, fn, id) => { const b = document.createElement('button'); if (id) b.id = id; b.innerHTML = `<svg viewBox="0 0 24 24">${icon}</svg>${label}`; b.onclick = fn; g.appendChild(b); return b; };
+  add('Your town', '<path d="M5 4h14v7c0 5-4 8-7 9-3-1-7-4-7-9z"/><path d="M12 8v8M8 12h8"/>', () => { closeTray(); townCard(); }, 'mTown');
   add('Map', '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/>', () => { setMap(!mapOn); closeTray(); refreshMore(); }, 'mMap');
   add('Pins', '<path d="M12 21s-6-5.5-6-10a6 6 0 0112 0c0 4.5-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>', () => { document.getElementById('pinsB').click(); refreshMore(); }, 'mPins');
   add('Clean view', '<circle cx="12" cy="12" r="8"/><path d="M12 4v16"/>', () => { document.getElementById('cleanB').click(); refreshMore(); }, 'mClean');
@@ -5411,7 +5677,7 @@ function updateQuest(t) {
   if (!quest || quest.k >= QUEST.length) return;
   const q = QUEST[quest.k];
   if (q.n() > quest.base) { funds += 100; updateEco(); fxAt(innerWidth / 2, 120, `+${euro(100)}`, 'big coin'); toast(`Done: ${q.t}`);
-    if (quest.k + 1 >= QUEST.length) { funds += 200; updateEco(); toast('Your first street is alive! +€200. Goals take over from here'); for (let k = 0; k < 5; k++) setTimeout(firework, k * 300); try { localStorage.setItem('tilt-quest', 'done'); } catch (e) { } quest.k = QUEST.length; renderQuest(); updateLevelUI(); return; }
+    if (quest.k + 1 >= QUEST.length) { funds += 200; updateEco(); toast('Your first street is alive! +€200. Goals take over from here'); setTimeout(askTownName, 2800); for (let k = 0; k < 5; k++) setTimeout(firework, k * 300); try { localStorage.setItem('tilt-quest', 'done'); } catch (e) { } quest.k = QUEST.length; renderQuest(); updateLevelUI(); return; }
     questStart(quest.k + 1); return; }
   if (!quest.cell || (q.tg === 'plot' && (quest.cell.floors || quest.cell.kind)) || (q.tg === 'shophouse' && quest.cell.biz)) { quest.cell = qTarget(q.tg); }
   const c = quest.cell; qMark.visible = !!c && !mapOn;
