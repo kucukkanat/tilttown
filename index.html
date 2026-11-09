@@ -2779,8 +2779,23 @@ const RENT = {cafe: 28, bakery: 15, grocer: 30, tasca: 45, fish: 24, florist: 18
 const WAGE = {staff: 30, keeper: 25}, INCOME = {worker: 70, retiree: 38, student: 16, staff: 30, keeper: 25, child: 0, baby: 0, courier: 55, musician: 30};
 const BIZ_TAX = .2, RES_TAX = 4, START_FUNDS = 1500;
 let funds = START_FUNDS, ledger = {day: 0, resTax: 0, bizTax: 0, upkeep: 0, closed: [], moved: [], arrived: 0};
-const euro = v => `€${Math.round(v).toLocaleString('en-US')}`;
-function spend(v, what) { if (funds < v) { say(`Not enough money: ${what} costs ${euro(v)}`); flashEco(); return false; } funds -= v; updateEco(); return true; }
+const euro = v => v >= 1e11 ? '∞' : `€${Math.round(v).toLocaleString('en-US')}`;
+/* ---- cheats: type a code anywhere (or in Menu › Code) ---- */
+const CHEAT_BIG = 1e12, INF_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" style="vertical-align:-5px"><path d="M6.6 8.4C4.6 8.4 3 10 3 12s1.6 3.6 3.6 3.6c3.6 0 7.2-7.2 10.8-7.2 2 0 3.6 1.6 3.6 3.6s-1.6 3.6-3.6 3.6c-3.6 0-7.2-7.2-10.8-7.2z" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+let cheatMoney = false, cheatReal = 0;
+try { const c = JSON.parse(localStorage.getItem('tilt-cheat') || 'null'); if (c && c.money) { cheatMoney = true; cheatReal = c.real || 0; } } catch (e) { }
+function cheatSave() { try { localStorage.setItem('tilt-cheat', JSON.stringify({money: cheatMoney, real: cheatReal})); } catch (e) { } }
+function cheatApply() { if (cheatMoney && funds < 1e11) { cheatReal = funds; funds = CHEAT_BIG; } }
+function setCheatMoney(on) {
+  if (on === cheatMoney) return; cheatMoney = on;
+  if (on) { cheatReal = funds; funds = CHEAT_BIG; } else funds = cheatReal;
+  cheatSave(); updateEco(); if (typeof refreshItems === 'function') refreshItems(); if (typeof scheduleSave === 'function') scheduleSave();
+  toast(on ? 'Cheat: unlimited money' : 'Unlimited money off'); if (on && typeof firework === 'function') firework();
+}
+const CHEATS = {elonmusk: () => setCheatMoney(!cheatMoney)};
+function tryCheat(text) { const t = String(text).toLowerCase().replace(/[^a-z]/g, ''); for (const k in CHEATS) if (t.endsWith(k)) { CHEATS[k](); return true; } return false; }
+{ let buf = ''; addEventListener('keydown', e => { const tg = e.target; if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA')) return; if (e.key.length !== 1 || e.ctrlKey || e.metaKey) return; buf = (buf + e.key.toLowerCase()).slice(-24); if (tryCheat(buf)) buf = ''; }); }
+function spend(v, what) { if (cheatMoney) { updateEco(); return true; } if (funds < v) { say(`Not enough money: ${what} costs ${euro(v)}`); flashEco(); return false; } funds -= v; updateEco(); return true; }
 function refund(v) { funds += Math.round(v * .3); updateEco(); }
 function newBizBooks(b) { b.cash ??= 200; b.rev ??= 0; b.hist ??= []; b.sales ??= 0; }
 function pay(z, b) {
@@ -2853,7 +2868,7 @@ const ecoEl = document.getElementById('eco'), toastEl = document.getElementById(
 let toastT;
 function toast(t) { toastEl.textContent = t; toastEl.style.opacity = 1; clearTimeout(toastT); toastT = setTimeout(() => toastEl.style.opacity = 0, 4200); }
 function flashEco() { ecoEl.classList.remove('flash'); void ecoEl.offsetWidth; ecoEl.classList.add('flash'); }
-function updateEco() { const j = townJoy(); ecoEl.innerHTML = `<b>${euro(funds)}</b><span>Mood ${Math.round(j * 100)}%</span><span>${citizens.length} people</span>`; }
+function updateEco() { const j = townJoy(); ecoEl.innerHTML = `<b${cheatMoney ? ' title="Unlimited money (cheat)"' : ''}>${cheatMoney ? INF_SVG : euro(funds)}</b><span>Mood ${Math.round(j * 100)}%</span><span>${citizens.length} people</span>`; }
 ecoEl.onclick = () => ledgerCard();
 function ledgerCard() {
   cardFor = {kind: 'ledger'};
@@ -3255,7 +3270,7 @@ function loadTown(D) {
   cells.forEach(c => { if (c.tmesh) terrainG.remove(c.tmesh); if (c.obj) objG.remove(c.obj); }); businesses = []; closeCard();
   cells = D.cells.map((a, k) => ({i: Math.floor(k / N), j: k % N, lvl: a[0], water: !!a[1], floors: a[2], kind: a[3] || null, biz: a[4] || null, bizName: a[5] || null, seed: a[6], tmesh: null, obj: null, glows: [], owned: a[7] !== 0, cond: a[8] ?? 1, style: a[9] || null, broken: !!a[10], statue: !!a[11], yard: a[12] ? String(a[12]).split(',') : [], bizLvl: a[13] || 0, dist: a[14] || null}));
   const M_ = D.meta || {}; stars = Math.max(stars, M_.stars || 0); landBought = M_.landBought || 0; quayWalls = !!M_.quayWalls; scen = M_.scen || {id: 'free'}; nataCell = M_.nata >= 0 ? cells[M_.nata] : null; stageCell = M_.stage >= 0 ? cells[M_.stage] : null; events = []; resetDayStats();
-  day = D.day; hour = D.hour; funds = D.funds; preset = PRESETS[D.preset] || PRESETS[0]; weather = D.weather || 'auto'; festNight = D.festNight ?? -1; unlocked = D.unlocked || unlocked; ledger = D.ledger || ledger; paper = D.paper || [];
+  day = D.day; hour = D.hour; funds = D.funds; cheatApply(); preset = PRESETS[D.preset] || PRESETS[0]; weather = D.weather || 'auto'; festNight = D.festNight ?? -1; unlocked = D.unlocked || unlocked; ledger = D.ledger || ledger; paper = D.paper || [];
   tram = D.tram ? {...D.tram, t: 0, dir: 1, wait: 0} : null; funi = D.funi ? {...D.funi, t: 0, dir: 1, wait: 0} : null;
   cells.forEach(c => { rebuildTerrain(c); rebuildObj(c); }); rebuildGlows(); rebuildLaundry();
   for (const [ci, cash, rev, hist, visits] of D.biz || []) { const b = businesses.find(o => o.cell === cells[ci]); if (b) Object.assign(b, {cash, rev, hist: hist || [], visits: visits || 0}); }
@@ -3331,6 +3346,7 @@ document.getElementById('menu').onclick = () => {
     <div class="grid"><button class="act" data-m="undo">↶ Undo</button><button class="act" data-m="photo">Photo mode</button><button class="act" data-m="fest">Hold São João tonight</button><button class="act" data-m="paper">Town paper</button><button class="act" data-m="goals">Goals & stories</button><button class="act" data-m="scen">Scenarios</button><button class="act" data-m="album">Postcard album</button>${quayWalls ? '' : `<button class="act" data-m="quay">Quay walls ${euro(500)}</button>`}</div>${traits.size ? `<p><span>Town character</span>${[...traits].map(t => `${TRAITS[t][0]} (${TRAITS[t][1]})`).join('; ')}</p>` : ''}
     <p><span>Weather</span></p><div class="grid">${W.map(w => `<button class="act ${weather === w ? 'on' : ''}" data-w="${w}">${w === 'auto' ? 'By preset' : w[0].toUpperCase() + w.slice(1)}</button>`).join('')}</div>
     <p><span>Look</span></p><div class="grid"><button class="act ${lookStyle === 'illus' ? 'on' : ''}" data-look="illus">Illustrated</button><button class="act ${lookStyle === 'paint' ? 'on' : ''}" data-look="paint">Painterly</button></div>
+    <p><span>Code</span></p><div class="grid"><input id="cheatIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Enter a code" style="flex:1;width:100%;min-height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(243,230,204,.2);background:rgba(0,0,0,.25);color:var(--paper);font:500 14px Inter,system-ui,sans-serif"></div>
     <p><span>Night brightness</span></p><div class="grid"><input id="nightB" type="range" min="0.6" max="1.8" step="0.05" value="${postU.nightB.value}" style="flex:1;width:100%;accent-color:#f0a35c;height:32px"></div>
     <p><span>Quality</span></p><div class="grid">${['auto', 'high', 'low'].map(q => `<button class="act ${quality === q ? 'on' : ''}" data-q="${q}">${q[0].toUpperCase() + q.slice(1)}</button>`).join('')}</div>
     <p><span>Town</span></p><div class="grid"><button class="act" data-m="save">Copy town code</button><button class="act" data-m="load">Load town code</button><button class="act" data-m="new">New town</button><button class="act" data-m="clear">Clear land</button><button class="act" data-m="tut">How to play</button></div>
@@ -3338,6 +3354,7 @@ document.getElementById('menu').onclick = () => {
   cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard;
   cardEl.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { weather = b.dataset.w; scheduleSave(); document.getElementById('menu').click(); });
   cardEl.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { setQuality(b.dataset.q); document.getElementById('menu').click(); });
+  { const ci = cardEl.querySelector('#cheatIn'); if (ci) ci.oninput = () => { if (tryCheat(ci.value)) { ci.value = ''; ci.blur(); } }; }
   { const nb = cardEl.querySelector('#nightB'); if (nb) nb.oninput = () => { postU.nightB.value = +nb.value; try { localStorage.setItem('tilt-nightb', nb.value); } catch (e) { } }; }
   cardEl.querySelectorAll('[data-look]').forEach(b => b.onclick = () => { setLookStyle(b.dataset.look); document.getElementById('menu').click(); });
   cardEl.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => {
@@ -3747,7 +3764,7 @@ function generate(seed, opt = {}) {
   cells.forEach(c => { rebuildTerrain(c); rebuildObj(c); });
   rebuildGlows(); rebuildLaundry();
   spawnCitizens(seed);
-  funds = opt.funds ?? START_FUNDS; ledger = {day: 0, resTax: 0, bizTax: 0, upkeep: 0, closed: [], moved: [], arrived: 0}; businesses.forEach(newBizBooks);
+  funds = opt.funds ?? START_FUNDS; cheatApply(); ledger = {day: 0, resTax: 0, bizTax: 0, upkeep: 0, closed: [], moved: [], arrived: 0}; businesses.forEach(newBizBooks);
   requests = []; reqDone = []; paper = []; paperToday = []; unlocked = opt.landmarks ? {church: true, tram: true, funicular: true} : {church: false, tram: false, funicular: false}; festNight = -1; undoStack.length = 0;
   landBought = 0; quayWalls = false; events = []; nataCell = null; stageCell = null; marketOn = false; scen = {id: 'free'}; water.position.y = -.32; resetDayStats(); pickNotables(); makeStories(); computeTraits(); makeGoals(); updateScenChip();
   rebuildWaterFx(); placeCats(); updateEco(); updateReqChip(); setTimeout(() => { if (!requests.length) makeRequest(); }, 4000); autosave();
