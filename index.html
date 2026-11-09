@@ -2178,6 +2178,7 @@ document.getElementById('photoExit').onclick = () => setPhoto(false);
 
 /* ---- quality governor ---- */
 let quality = 'auto', qPaint = 1, fpsAcc = 0, fpsN = 0, fpsDone = false, lodFar = 75, lodMid = 26;
+try { const v = parseFloat(localStorage.getItem('tilt-nightb')); if (v) setTimeout(() => postU.nightB.value = v, 0); } catch (e) { }
 let lookStyle = 'illus'; try { lookStyle = localStorage.getItem('tilt-look') || 'illus'; } catch (e) { }
 function setLookStyle(st, init) {
   lookStyle = st; const on = st === 'illus'; postU.illus.value = on ? 1 : 0;
@@ -2200,12 +2201,14 @@ document.getElementById('menu').onclick = () => {
     <div class="grid"><button class="act" data-m="undo">↶ Undo</button><button class="act" data-m="photo">Photo mode</button><button class="act" data-m="fest">Hold São João tonight</button><button class="act" data-m="paper">Town paper</button><button class="act" data-m="goals">Goals & stories</button><button class="act" data-m="scen">Scenarios</button><button class="act" data-m="album">Postcard album</button>${quayWalls ? '' : `<button class="act" data-m="quay">Quay walls ${euro(500)}</button>`}</div>${traits.size ? `<p><span>Town character</span>${[...traits].map(t => `${TRAITS[t][0]} (${TRAITS[t][1]})`).join('; ')}</p>` : ''}
     <p><span>Weather</span></p><div class="grid">${W.map(w => `<button class="act ${weather === w ? 'on' : ''}" data-w="${w}">${w === 'auto' ? 'By preset' : w[0].toUpperCase() + w.slice(1)}</button>`).join('')}</div>
     <p><span>Look</span></p><div class="grid"><button class="act ${lookStyle === 'illus' ? 'on' : ''}" data-look="illus">Illustrated</button><button class="act ${lookStyle === 'paint' ? 'on' : ''}" data-look="paint">Painterly</button></div>
+    <p><span>Night brightness</span></p><div class="grid"><input id="nightB" type="range" min="0.6" max="1.8" step="0.05" value="${postU.nightB.value}" style="flex:1;width:100%;accent-color:#f0a35c;height:32px"></div>
     <p><span>Quality</span></p><div class="grid">${['auto', 'high', 'low'].map(q => `<button class="act ${quality === q ? 'on' : ''}" data-q="${q}">${q[0].toUpperCase() + q.slice(1)}</button>`).join('')}</div>
     <p><span>Town</span></p><div class="grid"><button class="act" data-m="save">Copy town code</button><button class="act" data-m="load">Load town code</button><button class="act" data-m="new">New town</button><button class="act" data-m="clear">Clear land</button><button class="act" data-m="tut">How to play</button></div>
     <div id="codeBox" style="display:none"><textarea id="codeTa" rows="4" style="width:100%;font-size:11px;background:rgba(0,0,0,.3);color:var(--paper);border:1px solid rgba(243,230,204,.2);border-radius:8px"></textarea><button class="act wide" id="codeGo">Load this town</button></div>`;
   cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard;
   cardEl.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { weather = b.dataset.w; scheduleSave(); document.getElementById('menu').click(); });
   cardEl.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { setQuality(b.dataset.q); document.getElementById('menu').click(); });
+  { const nb = cardEl.querySelector('#nightB'); if (nb) nb.oninput = () => { postU.nightB.value = +nb.value; try { localStorage.setItem('tilt-nightb', nb.value); } catch (e) { } }; }
   cardEl.querySelectorAll('[data-look]').forEach(b => b.onclick = () => { setLookStyle(b.dataset.look); document.getElementById('menu').click(); });
   cardEl.querySelectorAll('[data-m]').forEach(b => b.onclick = async () => {
     const m = b.dataset.m;
@@ -2776,7 +2779,7 @@ const poolMat = new THREE.ShaderMaterial({uniforms: {uNight: litU.uNight, uTime:
   vertexShader: `attribute float aThr,aOcc;uniform float uNight;varying vec2 vUv;varying float vA;
     void main(){vUv=uv;vA=aThr<0.?aOcc*smoothstep(.15,.6,uNight):smoothstep(aThr,aThr+.06,uNight)*aOcc;gl_Position=projectionMatrix*modelViewMatrix*instanceMatrix*vec4(position,1.);}`,
   fragmentShader: GN + `uniform float uTime;varying vec2 vUv;varying float vA;void main(){vec2 p=vUv-.5;float r=length(p)*2.;float n=gN(vUv*9.)*.25;
-    float a=pow(max(0.,1.-r-n*.3),2.2)*vA;gl_FragColor=vec4(vec3(1.,.6,.26)*a*.75,1.);}`});
+    float a=pow(max(0.,1.-r-n*.3),2.2)*vA;gl_FragColor=vec4(vec3(1.,.62,.3)*a*1.05,1.);}`});
 let pools = null, poolIdx = [];
 function buildPools() {
   if (pools) { scene.remove(pools); pools.dispose(); pools = null; }
@@ -2786,7 +2789,7 @@ function buildPools() {
     const lamp = c.kind === 'lamp', shop = thr < 0 && !c.kind;
     if (!lamp && !shop) continue;
     if (shop && pos.getY(i) - topY(c) > 1.4) continue;
-    items.push([pos.getX(i), topY(c) + .045, pos.getZ(i), lamp ? 3.4 : 2.2, thr]); poolIdx.push(i);
+    items.push([pos.getX(i), topY(c) + .045, pos.getZ(i), lamp ? 4.4 : 2.8, thr]); poolIdx.push(i);
   }
   if (!items.length) return;
   const g = new THREE.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2);
@@ -3218,6 +3221,7 @@ let preset = PRESETS[0], tod = .5;
 const cA = new THREE.Color(), cB = new THREE.Color();
 function mix(key, a, b, t, out) { return out.copy(cA.set(a[key])).lerp(cB.set(b[key]), t); }
 const post = {tint: new THREE.Color()};
+const _moonP = new THREE.Vector3();
 function applyLook() {
   const [d, du, n] = preset.k; const [a, b, t] = tod < .5 ? [d, du, tod * 2] : [du, n, (tod - .5) * 2];
   mix('top', a, b, t, skyU.top.value); mix('hor', a, b, t, skyU.hor.value); mix('cloud', a, b, t, skyU.cloud.value); mix('sun', a, b, t, skyU.sunCol.value);
@@ -3230,6 +3234,9 @@ function applyLook() {
   if (ill) { sun.intensity *= 1.3; hemi.intensity *= 1.18; hemi.color.lerp(cB.set('#7a80c0'), .22); }
   sun.position.set(Math.cos(az) * Math.cos(el2) * 50, Math.sin(el2) * 50, Math.sin(az) * Math.cos(el2) * 50);
   skyU.sunDir.value.copy(sun.position).normalize();
+  { const nk = THREE.MathUtils.smoothstep(tod, .45, .8);
+    if (nk > 0) { sun.position.lerp(_moonP.copy(skyU.moonDir.value).multiplyScalar(50), nk); sun.color.lerp(cB.set('#9fb4ec'), nk); sun.intensity = lerp(sun.intensity, Math.max(sun.intensity, 1.35), nk);
+      hemi.intensity *= 1 + nk * .9; hemi.color.lerp(cB.set('#6a76b8'), nk * .5); hemi.groundColor.lerp(cB.set('#2a2440'), nk * .4); } }
   skyU.wind.value = preset.wind; skyU.cloudAmt.value = preset.cloudAmt; skyU.swirl.value = preset.swirl;
   const night = THREE.MathUtils.smoothstep(tod, .3, .8);
   litU.uNight.value = night; litU.uWind.value = .12 + preset.wind * .35;
@@ -3244,13 +3251,13 @@ function applyLook() {
 let rt, maskRT, selRT;
 const maskMat = new THREE.MeshBasicMaterial({color: 0xffffff});
 const postU = {selOn: {value: 0}, selPulse: {value: 1}, tSel: {value: null}, selCol: {value: new THREE.Color('#ffc86a')}, tilt: {value: 0}, tColor: {value: null}, tDepth: {value: null}, tMask: {value: null}, res: {value: new THREE.Vector2()}, cNear: {value: camera.near}, cFar: {value: camera.far}, time: {value: 0}, paint: {value: 1.6}, ink: {value: new THREE.Color('#24160f')}, tint: {value: new THREE.Color()}, night: {value: 0},
-  shT: {value: new THREE.Color('#3a6a7a')}, hiT: {value: new THREE.Color('#ffcfa0')}, sunUV: {value: new THREE.Vector2(.5, .9)}, sunCol: {value: new THREE.Color()}, golden: {value: 0}, rays: {value: 0}, dof: {value: 0}, focusD: {value: 30}, aoAmt: {value: .5}, fx: {value: 1}, tMap: {value: null}, mapOn: {value: 0}, tHov: {value: null}, hovOn: {value: 0}, hovCol: {value: new THREE.Color('#fff4dc')}, focUV: {value: new THREE.Vector2(.5, .5)}, focR: {value: 0}, illus: {value: 0}, hazeC: {value: new THREE.Color()}};
+  shT: {value: new THREE.Color('#3a6a7a')}, hiT: {value: new THREE.Color('#ffcfa0')}, sunUV: {value: new THREE.Vector2(.5, .9)}, sunCol: {value: new THREE.Color()}, golden: {value: 0}, rays: {value: 0}, dof: {value: 0}, focusD: {value: 30}, aoAmt: {value: .5}, fx: {value: 1}, tMap: {value: null}, mapOn: {value: 0}, tHov: {value: null}, hovOn: {value: 0}, hovCol: {value: new THREE.Color('#fff4dc')}, focUV: {value: new THREE.Vector2(.5, .5)}, focR: {value: 0}, illus: {value: 0}, hazeC: {value: new THREE.Color()}, nightB: {value: 1}};
 const postScene = new THREE.Scene(), postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
   uniforms: postU, depthTest: false, depthWrite: false,
   vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.,1.);}`,
   fragmentShader: NOISE + `
-  uniform sampler2D tColor,tDepth,tMask,tSel;uniform vec3 selCol;uniform float selOn,selPulse;uniform vec2 res;uniform float tilt,cNear,cFar,time,paint,night;uniform vec3 ink,tint,shT,hiT,sunCol;uniform vec2 sunUV;uniform float golden,rays,dof,focusD,aoAmt,fx,mapOn,hovOn,focR,illus;uniform vec3 hazeC;uniform sampler2D tMap,tHov;uniform vec3 hovCol;uniform vec2 focUV;varying vec2 vUv;
+  uniform sampler2D tColor,tDepth,tMask,tSel;uniform vec3 selCol;uniform float selOn,selPulse;uniform vec2 res;uniform float tilt,cNear,cFar,time,paint,night;uniform vec3 ink,tint,shT,hiT,sunCol;uniform vec2 sunUV;uniform float golden,rays,dof,focusD,aoAmt,fx,mapOn,hovOn,focR,illus,nightB;uniform vec3 hazeC;uniform sampler2D tMap,tHov;uniform vec3 hovCol;uniform vec2 focUV;varying vec2 vUv;
   float lin(float d){float z=d*2.-1.;return 2.*cNear*cFar/(cFar+cNear-z*(cFar-cNear));}
   float LD(vec2 p){return lin(texture2D(tDepth,p).r);}
   float luma(vec3 c){return dot(c,vec3(.3,.59,.11));}
@@ -3309,7 +3316,8 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMate
     float bleed=smoothstep(.0,.5,max(e*6.,jump*2.5))*(sky?0.:1.);
     col=mix(col,avg*1.03,bleed*.3*fx);col*=1.-bleed*.07*fx;
     col*=1.-smoothstep(.05,.22,gm)*.06*fx;
-    col=mix(col,ink*(.85+.3*pres),inkA*.82);
+    vec3 inkC=mix(ink*(.85+.3*pres),mix(vec3(.12,.12,.2),vec3(.42,.48,.68),sil),night*.85);
+    col=mix(col,inkC,inkA*mix(.82,mix(.45,.62,sil),night));
     // golden-hour light shafts
     if(rays>.01){vec2 dv=sunUV-uv;vec2 stp=dv/18.;vec2 pp=uv+stp*hash(q);float rs=0.;
       for(int k=0;k<18;k++){rs+=step(.9999,texture2D(tDepth,pp).r);pp+=stp;}
@@ -3329,7 +3337,7 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMate
     col+=tint*(1.-smoothstep(0.,.45,lum))*.04;
     col=col*(1.+night*.3)+vec3(.01,.012,.018)*night;
     if(illus>.5&&!sky){
-      float ak=smoothstep(focusD*.55,focusD*2.4,d);col=mix(col,hazeC*(1.+night*.5),ak*(.08+.26*night));
+      float ak=smoothstep(focusD*.55,focusD*2.4,d);col=mix(col,hazeC*(1.+night*.5),ak*(.08+.04*night));
       col=col*(1.+night*.25)+vec3(.008,.01,.02)*night;
       vec3 cc=clamp(col,0.,1.);vec3 sc=cc*cc*(3.-2.*cc);col=mix(col,sc+(col-cc),mix(.22,.42,night));col+=vec3(.025,.02,.015)*(1.-night);
       float hl=luma(col);float hp=abs(fract((q.x+q.y+noise(q/28.)*7.)/4.6)-.5);
@@ -3346,6 +3354,10 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMate
     float g=noise(q*.8);
     float stv=noise(vec2((uv.x+uv.y)*res.x*.04,(uv.x-uv.y)*res.y*.5));
     col*=.92+.08*g; col*=.95+.1*stv; col*=1.+weave*.028*fx-fib*.05*fx;
+    if(night>.02){vec3 bl=vec3(0);for(int k=0;k<12;k++){float a=float(k)*.5236;vec2 o=vec2(cos(a),sin(a))*px*(k<6?7.:16.);vec3 s=texture2D(tColor,uv+o).rgb;float w=max(0.,luma(s)-.62)*smoothstep(.0,.15,s.r-s.b);bl+=vec3(1.,.66,.34)*w*(k<6?1.:.6);}
+      col+=bl/12.*night*1.6*(sky?.3:1.);
+      if(sky)col*=1.-.22*night;}
+    col*=mix(1.,nightB,night);
     col*=mix(.72,1.,smoothstep(.95,.3,length(vUv-.5)*1.25));
     if(hovOn>.02){float h0=texture2D(tHov,uv).r,hm=0.;for(int k=0;k<8;k++){float a=float(k)*.785;hm=max(hm,texture2D(tHov,uv+vec2(cos(a),sin(a))*px*2.2).r);}
       col=mix(col,hovCol*1.25,clamp(hm-h0,0.,1.)*hovOn*.9);col+=hovCol*h0*.06*hovOn;}
