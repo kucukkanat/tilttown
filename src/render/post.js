@@ -2,7 +2,7 @@ import './clarity.js'; // load order: runs after the previous module
 import * as THREE from 'three';
 import {G} from '../state.js';
 import {lerp} from '../core/util.js';
-import {DPR, NOISE, SMALL, camera, hemi, litU, renderer, scene, skyU, sun, waterMat} from '../core/scene.js';
+import {DPR, NOISE, SMALL, camera, hemi, litU, renderer, scene, skyU, sun, waterMat, waterU} from '../core/scene.js';
 import {glowU} from '../world/houses.js';
 import {smokeCol} from '../world/streets.js';
 import {addBlueHour} from '../game/meta.js';
@@ -11,7 +11,7 @@ import {addBlueHour} from '../game/meta.js';
 const P = (top, hor, cloud, sun, si, hs, hg, hi, wat) => ({top, hor, cloud, sun, si, hs, hg, hi, wat});
 const PRESETS = [
   {name: 'Porto dusk', dot: '#f2a07a', wind: .6, cloudAmt: .55, swirl: .7, leaves: .4, tint: '#7a4a6a',
-    k: [P('#7fa6cf', '#f0d9b5', '#fff0dc', '#fff0d0', 2.4, '#bcd0e8', '#7a6050', 1.1, '#4f8a96'),
+    k: [P('#7fa6cf', '#ebe0c8', '#fff4e6', '#fff4e2', 2.4, '#bcd0e8', '#7a6050', 1.1, '#4f8a96'),
         P('#6a5a8e', '#f3a17c', '#f6c09a', '#ff9a5c', 2.0, '#b48ab0', '#5a3a3a', .9, '#4a5a7a'),
         P('#161c38', '#3e3456', '#4c4268', '#7b8ac0', .35, '#3a4070', '#1a1420', .55, '#1b2a40')]},
   {name: 'Night canal', dot: '#3f8f8f', wind: .5, cloudAmt: .7, swirl: 1.4, leaves: .2, tint: '#1f5a66',
@@ -40,7 +40,8 @@ function applyLook() {
   scene.fog.color.copy(skyU.hor.value).lerp(skyU.top.value, .25);
   sun.color.copy(skyU.sunCol.value); sun.intensity = lerp(a.si, b.si, t);
   mix('hs', a, b, t, hemi.color); mix('hg', a, b, t, hemi.groundColor); hemi.intensity = lerp(a.hi, b.hi, t);
-  mix('wat', a, b, t, waterMat.color);
+  hemi.groundColor.lerp(cB.set('#3e5276'), .35);
+  mix('wat', a, b, t, waterMat.color); waterMat.color.offsetHSL(0, .12, 0); waterU.uSky.value.copy(skyU.hor.value).lerp(skyU.top.value, .4);
   const elev = G.tod < .75 ? lerp(1.05, .16, Math.min(1, G.tod / .55)) : .5, az = G.tod < .75 ? .9 + G.tod * .9 : -.6;
   const ill = postU.illus.value > .5, el2 = ill ? elev * lerp(.92, .72, Math.min(1, G.tod / .45)) + .05 : elev;
   if (ill) { sun.intensity *= 1.3; hemi.intensity *= 1.18; hemi.color.lerp(cB.set('#7a80c0'), .22); }
@@ -48,7 +49,7 @@ function applyLook() {
   skyU.sunDir.value.copy(sun.position).normalize();
   { const nk = THREE.MathUtils.smoothstep(G.tod, .45, .8);
     if (nk > 0) { sun.position.lerp(_moonP.copy(skyU.moonDir.value).multiplyScalar(50), nk); sun.color.lerp(cB.set('#9fb4ec'), nk); sun.intensity = lerp(sun.intensity, Math.max(sun.intensity, 1.35), nk);
-      hemi.intensity *= 1 + nk * .9; hemi.color.lerp(cB.set('#6a76b8'), nk * .5); hemi.groundColor.lerp(cB.set('#2a2440'), nk * .4); } }
+      hemi.intensity *= 1 + nk * .55; hemi.color.lerp(cB.set('#6a76b8'), nk * .5); hemi.groundColor.lerp(cB.set('#2a2440'), nk * .4); } }
   skyU.wind.value = G.preset.wind; skyU.cloudAmt.value = G.preset.cloudAmt; skyU.swirl.value = G.preset.swirl;
   const night = THREE.MathUtils.smoothstep(G.tod, .3, .8);
   litU.uNight.value = night; litU.uWind.value = .12 + G.preset.wind * .35;
@@ -63,7 +64,7 @@ function applyLook() {
 let rt, maskRT, selRT;
 const maskMat = new THREE.MeshBasicMaterial({color: 0xffffff});
 const postU = {selOn: {value: 0}, selPulse: {value: 1}, tSel: {value: null}, selCol: {value: new THREE.Color('#ffc86a')}, tilt: {value: 0}, tColor: {value: null}, tDepth: {value: null}, tMask: {value: null}, res: {value: new THREE.Vector2()}, cNear: {value: camera.near}, cFar: {value: camera.far}, time: {value: 0}, paint: {value: 1.6}, ink: {value: new THREE.Color('#24160f')}, tint: {value: new THREE.Color()}, night: {value: 0},
-  shT: {value: new THREE.Color('#3a6a7a')}, hiT: {value: new THREE.Color('#ffcfa0')}, sunUV: {value: new THREE.Vector2(.5, .9)}, sunCol: {value: new THREE.Color()}, golden: {value: 0}, rays: {value: 0}, dof: {value: 0}, focusD: {value: 30}, aoAmt: {value: .5}, fx: {value: 1}, tMap: {value: null}, mapOn: {value: 0}, tHov: {value: null}, hovOn: {value: 0}, hovCol: {value: new THREE.Color('#fff4dc')}, focUV: {value: new THREE.Vector2(.5, .5)}, focR: {value: 0}, illus: {value: 0}, hazeC: {value: new THREE.Color()}, nightB: {value: 1}};
+  shT: {value: new THREE.Color('#3a6a7a')}, hiT: {value: new THREE.Color('#ffcfa0')}, sunUV: {value: new THREE.Vector2(.5, .9)}, sunCol: {value: new THREE.Color()}, golden: {value: 0}, rays: {value: 0}, dof: {value: 0}, focusD: {value: 30}, aoAmt: {value: .3}, fx: {value: 1}, tMap: {value: null}, mapOn: {value: 0}, tHov: {value: null}, hovOn: {value: 0}, hovCol: {value: new THREE.Color('#fff4dc')}, focUV: {value: new THREE.Vector2(.5, .5)}, focR: {value: 0}, illus: {value: 0}, hazeC: {value: new THREE.Color()}, nightB: {value: 1}};
 const postScene = new THREE.Scene(), postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
   uniforms: postU, depthTest: false, depthWrite: false,
@@ -100,7 +101,7 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMate
     float sk=(smoothstep(.004,.06,gm)*.4+.12)*fx*(1.-blur*.6)*(1.-keep*.8);
     col=mix(col,sm,sk);
     float bristle=noise(vec2(dot(q,td)*.09,dot(q,vec2(-td.y,td.x))*.75));
-    col*=1.+(bristle-.5)*.1*fx*(1.-illus*.6);
+    col*=1.+(bristle-.5)*.05*fx*(1.-illus*.6)*(sky?0.:1.);
     if(illus>.5){vec3 raw=texture2D(tColor,uv+warp*.25).rgb;col=mix(raw,col,.12);}
     col=mix(col,texture2D(tColor,uv).rgb,max(texture2D(tMask,uv).r*(1.-tilt*smoothstep(.15,.4,abs(vUv.y-.5)))*(1.-blur),keep*.5));
     // ambient occlusion from depth
@@ -128,7 +129,7 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMate
     float bleed=smoothstep(.0,.5,max(e*6.,jump*2.5))*(sky?0.:1.);
     col=mix(col,avg*1.03,bleed*.3*fx);col*=1.-bleed*.07*fx;
     col*=1.-smoothstep(.05,.22,gm)*.06*fx;
-    vec3 inkC=mix(ink*(.85+.3*pres),mix(vec3(.12,.12,.2),vec3(.42,.48,.68),sil),night*.85);
+    vec3 inkC=mix(ink*(.85+.3*pres),mix(vec3(.06,.07,.13),vec3(.2,.24,.4),sil),night*.85);
     col=mix(col,inkC,inkA*mix(.82,mix(.45,.62,sil),night));
     // golden-hour light shafts
     if(rays>.01){vec2 dv=sunUV-uv;vec2 stp=dv/18.;vec2 pp=uv+stp*hash(q);float rs=0.;
@@ -143,11 +144,16 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMate
       col=mix(col,col*cool*1.9+cool*(.1+.05*night),shd*mix(.45,.72,night));
       float warm=smoothstep(.5,.85,lum)*smoothstep(.0,.15,col.r-col.b);
       col=mix(vec3(luma(col)),col,mix(1.12,1.38,warm));col*=1.+warm*.12;col=mix(col,hiT*1.05,smoothstep(.8,1.15,luma(col))*.65);lum=luma(col);}
-    col=mix(vec3(lum),col,1.12);
+    col=mix(vec3(lum),col,1.2);
     vec3 tone=mix(shT,hiT,smoothstep(.06,.65,lum));tone/=max(luma(tone),.01);
-    col=mix(col,col*tone,.3*fx);
-    col+=tint*(1.-smoothstep(0.,.45,lum))*.04;
-    col=col*(1.+night*.3)+vec3(.01,.012,.018)*night;
+    col=mix(col,col*tone,.15*fx);
+    col+=tint*(1.-smoothstep(0.,.45,lum))*.02;
+    // cool shadows: shade toward blue-violet instead of black
+    {vec3 cool=vec3(.78,.88,1.22);float shd=1.-smoothstep(.04,.3,lum);col=mix(col,col*cool+vec3(.006,.01,.02),shd*.6*(1.-night*.5));}
+    if(illus<.5){vec3 cc=clamp(col,0.,1.);col=mix(col,cc*cc*(3.-2.*cc)+(col-cc),.22);}
+    // aerial perspective: far things desaturate and fade toward the haze
+    if(!sky&&illus<.5){float ak=smoothstep(focusD*.9,focusD*3.2,d);col=mix(col,vec3(luma(col)),ak*.35*(1.-night*.5));col=mix(col,hazeC,ak*.22*(1.-night*.8));}
+    col=col*(1.+night*.15)+vec3(.006,.008,.014)*night;
     if(illus>.5&&!sky){
       float ak=smoothstep(focusD*.55,focusD*2.4,d);col=mix(col,hazeC*(1.+night*.5),ak*(.08+.04*night));
       col=col*(1.+night*.25)+vec3(.008,.01,.02)*night;
@@ -165,12 +171,13 @@ postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMate
     float fib=noise(vec2(q.x*.06+q.y*.7,q.y*.025))*noise(q*.31);
     float g=noise(q*.8);
     float stv=noise(vec2((uv.x+uv.y)*res.x*.04,(uv.x-uv.y)*res.y*.5));
-    col*=.92+.08*g; col*=.95+.1*stv; col*=1.+weave*.028*fx-fib*.05*fx;
+    float gk=sky?.25:1.-.6*smoothstep(40.,120.,d);
+    col*=1.-gk*(.04-.04*g); col*=1.+gk*(stv-.5)*.05; col*=1.+gk*(weave*.014-fib*.025)*fx;
     if(night>.02){vec3 bl=vec3(0);for(int k=0;k<12;k++){float a=float(k)*.5236;vec2 o=vec2(cos(a),sin(a))*px*(k<6?7.:16.);vec3 s=texture2D(tColor,uv+o).rgb;float w=max(0.,luma(s)-.62)*smoothstep(.0,.15,s.r-s.b);bl+=vec3(1.,.66,.34)*w*(k<6?1.:.6);}
       col+=bl/12.*night*1.6*(sky?.3:1.);
       if(sky)col*=1.-.22*night;}
     col*=mix(1.,nightB,night);
-    col*=mix(.72,1.,smoothstep(.95,.3,length(vUv-.5)*1.25));
+    col*=mix(.82,1.,smoothstep(.95,.3,length(vUv-.5)*1.25));
     if(hovOn>.02){float h0=texture2D(tHov,uv).r,hm=0.;for(int k=0;k<8;k++){float a=float(k)*.785;hm=max(hm,texture2D(tHov,uv+vec2(cos(a),sin(a))*px*2.2).r);}
       col=mix(col,hovCol*1.25,clamp(hm-h0,0.,1.)*hovOn*.9);col+=hovCol*h0*.06*hovOn;}
     if(selOn>.5){float s0=texture2D(tSel,uv).r,m=0.;

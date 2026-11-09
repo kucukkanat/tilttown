@@ -232,7 +232,7 @@ function updateBoats(t) { const ub = waterU.uBoats.value; ub.forEach(v => v.w = 
 const PHONE = Math.min(innerWidth, innerHeight) < 700;
 G.hour = 7.6; G.day = 0; G.speed = 1; G.simAcc = 0;
 const now = () => G.day * 24 + G.hour;
-const TOD_K = [[0, 1], [4.5, 1], [6, .62], [7.5, .3], [9.5, 0], [16, 0], [18.5, .42], [20, .62], [21.5, .85], [23, 1], [24, 1]];
+const TOD_K = [[0, 1], [4.5, 1], [6, .55], [7, .2], [8.5, 0], [16, 0], [18.5, .42], [20, .62], [21.5, .85], [23, 1], [24, 1]];
 function hourToTod(h) { for (let i = 1; i < TOD_K.length; i++) { const [h1, v1] = TOD_K[i - 1], [h2, v2] = TOD_K[i]; if (h <= h2) return lerp(v1, v2, (h - h1) / (h2 - h1)); } return 1; }
 const hhmm = h => { const m = Math.floor(((h % 24) + 24) % 24 * 60); return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); };
 const raining = () => effWeather() === 'rain';

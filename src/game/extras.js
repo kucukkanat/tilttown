@@ -467,7 +467,7 @@ function setLookStyle(st, init) {
 }
 function setQuality(q) {
   quality = q; const low = q === 'low';
-  if (typeof reflector !== 'undefined') reflector.visible = !low; postU.aoAmt.value = low ? 0 : .5;
+  if (typeof reflector !== 'undefined') reflector.visible = !low; postU.aoAmt.value = low ? 0 : .3;
   renderer.setPixelRatio(low ? 1 : DPR); sun.castShadow = !low || !SMALL; qPaint = low ? .8 : 1; lodFar = low ? 45 : 75; lodMid = low ? 16 : 26; resize();
 }
 function governor(dt) { if (fpsDone || quality !== 'auto') return; fpsAcc += dt; fpsN++; if (fpsAcc > 5) { fpsDone = true; const fps = fpsN / fpsAcc; if (fps < 28) { setQuality('low'); quality = 'auto'; toast(`Running at ${Math.round(fps)} fps, so switched to lighter graphics (Menu → Quality)`); } } }
