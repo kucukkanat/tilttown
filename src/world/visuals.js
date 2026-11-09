@@ -38,6 +38,11 @@ const rockTex = canvasTex(256, (x, s) => {
   for (let i = 0; i < 140; i++) { x.strokeStyle = `rgba(40,30,28,${.2 + R0() * .3})`; x.lineWidth = 1 + R0() * 2; x.beginPath(); let px = R0() * s, py = R0() * s; x.moveTo(px, py); for (let k = 0; k < 5; k++) { px += (R0() - .5) * 22; py += R0() * 18; x.lineTo(px, py); } x.stroke(); }
 }, 1);
 const cliffMat = new THREE.MeshToonMaterial({vertexColors: true, map: rockTex, gradientMap: grad, emissive: 0x2a1a1c});
+cliffMat.onBeforeCompile = sh => { // the underside melts into haze so the eye stays on the town
+  sh.vertexShader = 'varying float vCY;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvCY=(modelMatrix*vec4(transformed,1.)).y;');
+  sh.fragmentShader = 'varying float vCY;\n' + sh.fragmentShader.replace('#include <fog_fragment>', '#include <fog_fragment>\n#ifdef USE_FOG\ngl_FragColor.rgb=mix(gl_FragColor.rgb,fogColor,smoothstep(-2.5,-12.,vCY)*.62);\n#endif');
+};
+cliffMat.customProgramCacheKey = () => 'cliff-haze';
 const CLIFF = {H: 14, rings: 30, segs: 128, half: N * S / 2 + .35};
 const _cR = rng(99), _cPh = [0, 1, 2, 3, 4].map(() => _cR() * 6.28);
 function cliffNoise(a, t) { return Math.sin(a * 5 + _cPh[0] + t * 3) * .5 + Math.sin(a * 11 + _cPh[1] - t * 7) * .3 + Math.sin(a * 23 + _cPh[2] + t * 13) * .18 + Math.sin(t * 17 + a * 3 + _cPh[3]) * .2 + Math.sin(a * 37 + _cPh[4]) * .08; }
@@ -175,7 +180,7 @@ const reflector = new Reflector(new THREE.PlaneGeometry(N * S, N * S), {textureW
     void main(){vec2 wob=vec2(sin(vW.z*3.1+uTime*1.3)+.6*sin(vW.x*6.-uTime*.9),sin(vW.x*2.7+uTime*1.1)+.5*sin(vW.z*7.+uTime))*.01;
       vec4 u=vUvR;u.xy+=wob*u.w;vec3 r=texture2DProj(tDiffuse,u).rgb;
       float dl=texture2D(uDist,vW.xz/${(N * S).toFixed(1)}+.5).r;
-      gl_FragColor=vec4(r*.92,uStr*smoothstep(.0,.12,dl));}`}});
+      gl_FragColor=vec4(r*vec3(.72,.9,.96),uStr*smoothstep(.0,.12,dl));}`}});
 reflector.rotation.x = -Math.PI / 2; reflector.position.y = -.315; reflector.renderOrder = 1;
 Object.assign(reflector.material, {transparent: true, depthWrite: false});
 reflector.material.uniforms.uDist.value = waterU.uDist.value;
@@ -277,7 +282,7 @@ function updateVisuals(dt, t) {
   fallG.position.y = water.position.y + .32;
   fallU.uCol.value.copy(waterMat.color); fallMistU.uC.value.copy(scene.fog.color).lerp(new THREE.Color(1, 1, 1), .5);
   reflector.position.y = water.position.y + .005; reflector.material.uniforms.uTime.value = t;
-  reflector.material.uniforms.uStr.value = .5 - .2 * litU.uNight.value;
+  reflector.material.uniforms.uStr.value = .34 - .12 * litU.uNight.value;
   backdrop.position.set(camera.position.x, camera.position.y - 7, camera.position.z);
   dustU.uC.value.copy(controls.target); dustU.uA.value = (postU.golden.value * .9 + .25) * (1 - litU.uNight.value) * (camera.position.distanceTo(controls.target) < 30 ? 1 : .3);
   skyU.night.value = litU.uNight.value;

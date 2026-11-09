@@ -20,7 +20,7 @@ const controls = new OrbitControls(camera, canvas);
 controls.target.set(0, 2.2, 0); controls.enableDamping = true; controls.dampingFactor = .08;
 controls.maxPolarAngle = 1.38; controls.minDistance = 10; controls.maxDistance = 85;
 
-const grad = new THREE.DataTexture(new Uint8Array([95, 95, 95, 255, 175, 175, 175, 255, 255, 255, 255, 255]), 3, 1);
+const grad = new THREE.DataTexture(new Uint8Array([145, 145, 145, 255, 208, 208, 208, 255, 255, 255, 255, 255]), 3, 1);
 grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
 const bodyMat = new THREE.MeshToonMaterial({vertexColors: true, map: plasterTex, gradientMap: grad});
 const roofMat = new THREE.MeshToonMaterial({vertexColors: true, map: tileTex, gradientMap: grad});
@@ -47,19 +47,21 @@ swayMat.onBeforeCompile = sh => {
 };
 const darkMat = new THREE.MeshToonMaterial({color: 0x26303a, gradientMap: grad});
 const waterMat = new THREE.MeshToonMaterial({color: 0x2c5a63, gradientMap: grad, emissive: 0x000000});
-const waterU = {uTime: {value: 0}, uDist: {value: (() => { const t = new THREE.DataTexture(new Uint8Array(64 * 64).fill(255), 64, 64, THREE.RedFormat); t.magFilter = t.minFilter = THREE.LinearFilter; t.needsUpdate = true; return t; })()}, uBoats: {value: Array.from({length: 6}, () => new THREE.Vector4())}, uFoamC: {value: new THREE.Color('#e9efe6')}};
+const waterU = {uTime: {value: 0}, uDist: {value: (() => { const t = new THREE.DataTexture(new Uint8Array(64 * 64).fill(255), 64, 64, THREE.RedFormat); t.magFilter = t.minFilter = THREE.LinearFilter; t.needsUpdate = true; return t; })()}, uBoats: {value: Array.from({length: 6}, () => new THREE.Vector4())}, uFoamC: {value: new THREE.Color('#e9efe6')}, uSky: {value: new THREE.Color('#bcd0e8')}};
 waterMat.onBeforeCompile = sh => {
   Object.assign(sh.uniforms, waterU);
   sh.vertexShader = 'varying vec3 vW;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\nvW=(modelMatrix*vec4(position,1.)).xyz;');
-  sh.fragmentShader = 'uniform float uTime;uniform sampler2D uDist;uniform vec4 uBoats[6];uniform vec3 uFoamC;varying vec3 vW;\nfloat wH(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float wN(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(wH(i),wH(i+vec2(1,0)),f.x),mix(wH(i+vec2(0,1)),wH(i+1.),f.x),f.y);}\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+  sh.fragmentShader = 'uniform float uTime;uniform sampler2D uDist;uniform vec4 uBoats[6];uniform vec3 uFoamC,uSky;varying vec3 vW;\nfloat wH(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}float wN(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(wH(i),wH(i+vec2(1,0)),f.x),mix(wH(i+vec2(0,1)),wH(i+1.),f.x),f.y);}\n' + sh.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
 float rr=sin(vW.x*2.6+uTime*1.4+sin(vW.z*1.7+uTime*.8)*1.6)*sin(vW.z*3.1-uTime*.6+vW.x*.4);
 diffuseColor.rgb*=1.+smoothstep(.6,.95,rr)*.45-smoothstep(.6,.95,-rr)*.12;
 float dl=texture2D(uDist,vW.xz/${(N * S).toFixed(1)}+.5).r;
 diffuseColor.rgb*=mix(1.14,.6,smoothstep(.05,.85,dl));
 float fn=wN(vW.xz*4.5+vec2(uTime*.35,-uTime*.25));
-float foam=smoothstep(.17,.02,dl-fn*.09)*(.55+.45*sin(uTime*1.7+dl*50.+fn*4.));
+vec3 vd=normalize(cameraPosition-vW);float fr=pow(1.-clamp(vd.y,0.,1.),3.);
+diffuseColor.rgb=mix(diffuseColor.rgb,uSky*.8,fr*.25);
+float foam=smoothstep(.1,.02,dl-fn*.07)*(.55+.45*sin(uTime*1.7+dl*50.+fn*4.));
 for(int k=0;k<6;k++){vec4 b=uBoats[k];if(b.w>.5){float r=length(vW.xz-b.xz);float ph=fract(r*1.7-uTime*.45);foam+=(1.-smoothstep(.0,.08,abs(ph-.5)))*smoothstep(1.8,.5,r)*smoothstep(.3,.5,r)*.55;}}
-diffuseColor.rgb=mix(diffuseColor.rgb,uFoamC,clamp(foam,0.,1.)*.62);`);
+diffuseColor.rgb=mix(diffuseColor.rgb,uFoamC,clamp(foam,0.,1.)*.5);`);
 };
 
 const hemi = new THREE.HemisphereLight(0xffffff, 0x443322, 1); scene.add(hemi);
@@ -117,7 +119,7 @@ const base = new THREE.Mesh(box(N * S + .6, 2.2, N * S + .6, '#5a4c44'), stoneMa
 base.position.y = -LV - 1.1; base.receiveShadow = true; scene.add(base);
 
 const WALLS = ['#d8a55c', '#5f9e9a', '#d98a6c', '#e6d2a6', '#6f8fb3', '#c9a33f', '#c97b84', '#8aa46a', '#b8c4c0', '#e0b58a', '#4f7f8f'];
-const ROOFS = ['#b5452f', '#a33d2c', '#c0563a', '#8e3a2a', '#9b4a32'];
+const ROOFS = ['#b23a26', '#9c3024', '#bf4a2e', '#862c22', '#a03d27'];
 const SHUT = ['#4f7a5a', '#3f6f7a', '#7a4a3a', '#5a6a3a', '#c9b48a', '#2f4f5f'];
 
 function mkMesh(geos, mat, cast = true) {

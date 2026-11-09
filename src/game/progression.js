@@ -76,7 +76,7 @@ G.lastLvl = null;
   #lvlB,#goalT{display:flex;align-items:center;gap:7px;padding:7px 11px;font:600 12px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper);cursor:pointer;border:0}
   #lvlB i{width:40px;height:5px;border-radius:3px;background:rgba(243,230,204,.18);overflow:hidden;display:block}#lvlB i b{display:block;height:100%;background:#f0a35c;border-radius:3px}
   #goalT{max-width:min(320px,calc(100vw - 24px));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#goalT em{font-style:normal;color:#f6c38a;margin-left:auto}
-  #quest{position:fixed;left:50%;transform:translateX(-50%);top:calc(60px + env(safe-area-inset-top));width:min(440px,calc(100vw - 20px));padding:10px 12px;display:none;z-index:5;font-size:13px}
+  #quest{position:fixed;left:14px;top:calc(60px + env(safe-area-inset-top));width:min(340px,calc(100vw - 20px));padding:10px 12px;display:none;z-index:5;font-size:13px}
   #quest.show{display:block}#quest.mini p,#quest.mini .qb,#quest.mini .bar{display:none}#quest.mini{padding:7px 12px}#quest .qh{display:flex;align-items:center;gap:8px}#quest .qh b{font:400 16px Caprasimo,Georgia,serif}#quest .qh small{margin-left:auto;opacity:.6}
   #quest p{margin:4px 0 8px;opacity:.85}#quest .qb{display:flex;gap:6px}#quest button{min-height:40px;padding:0 14px;border-radius:10px;border:0;font:600 13px 'Bricolage Grotesque',system-ui,sans-serif;cursor:pointer}
   #quest .go{background:#f0a35c;color:#24170f}#quest .skip{background:rgba(243,230,204,.1);color:var(--paper)}
@@ -87,7 +87,7 @@ G.lastLvl = null;
   .need{position:fixed;transform:translate(-50%,-100%);width:34px;height:34px;border-radius:50%;background:#fbf3e2;display:grid;place-items:center;font-size:18px;box-shadow:0 3px 10px rgba(0,0,0,.35);cursor:pointer;z-index:3;display:none}
   .need:after{content:'';position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-top-color:#fbf3e2;border-bottom:0}
   body.clean .need,body.clean #goalT,body.clean #lvlB,body.photo .need,body.photo #quest,body.photo #goalT,body.photo #lvlB{display:none!important}
-  @media (max-width:700px){#goalT{max-width:calc(100vw - 20px)}#quest{top:calc(100px + env(safe-area-inset-top))}}`; document.head.appendChild(st); }
+  @media (max-width:700px){#goalT{max-width:calc(100vw - 20px)}#quest{left:10px;top:calc(100px + env(safe-area-inset-top))}}`; document.head.appendChild(st); }
 
 const chipsEl = document.getElementById('chips'); const lvlB = document.createElement('button'); lvlB.id = 'lvlB'; lvlB.className = 'panel chip'; lvlB.onclick = () => goalsCard(); chipsEl.insertBefore(lvlB, document.getElementById('eco').nextSibling);
 const goalT = document.createElement('button'); goalT.id = 'goalT'; goalT.className = 'panel chip'; goalT.onclick = () => goalsCard(); chipsEl.appendChild(goalT);
