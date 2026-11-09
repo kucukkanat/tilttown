@@ -6,6 +6,7 @@ import {LV, N, R0, S, canvasTex, cyl, glowTex, jit, lerp, mul, paint, pick, rng,
 import {DIRS, WOBGL, azMat, base, bodyMat, brickMat, camera, cellAt, controls, darkMat, grad, litU, mkMesh, plainMat, roofMat, scene, skyU, swayMat, topY, water, waterMat, waterU, wx} from '../core/scene.js';
 import {glowGeo, glowRefs, glowU} from './houses.js';
 import {puffTex} from './streets.js';
+import {labelMat} from '../game/identity.js';
 import {warpD} from './organic.js';
 import {quality} from '../game/extras.js';
 import {postU} from '../render/post.js';
@@ -28,7 +29,7 @@ function wobPatch(mat, grime) {
   mat.needsUpdate = true;
 }
 wobPatch(bodyMat, true);
-[roofMat, plainMat, darkMat, brickMat, azMat].forEach(m => wobPatch(m, false));
+[roofMat, plainMat, darkMat, brickMat, azMat, labelMat].forEach(m => wobPatch(m, false)); // labels must wobble with the boards they sit on, or they sink into them
 
 /* ---- sculpted cliff island ---- */
 const rockTex = canvasTex(256, (x, s) => {

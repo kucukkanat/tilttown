@@ -65,6 +65,7 @@ LBL.tex = new THREE.CanvasTexture(LBL.cv); LBL.tex.colorSpace = THREE.SRGBColorS
 const labelMat = new THREE.MeshToonMaterial({map: LBL.tex, gradientMap: grad});
 labelMat.onBeforeCompile = sh => { sh.uniforms.uNight = litU.uNight; sh.fragmentShader = 'uniform float uNight;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance+=diffuseColor.rgb*uNight*.35;'); };
 labelMat.customProgramCacheKey = () => 'label';
+Object.assign(labelMat, {polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}); // win over the board it is painted on
 function fitFont(x, text, family, weight, maxW, size) { let s = size; do { x.font = `${weight} ${Math.round(s)}px ${family}`; if (x.measureText(text).width <= maxW) break; s *= .92; } while (s > 8); return s; }
 function lblDraw(s) {
   const x = LBL.ctx, X = (s.idx % 4) * 512, Y = Math.floor(s.idx / 4) * 128, bh = Math.min(128, 512 / s.aspect), by = Y + (128 - bh) / 2, st = s.style, t = s.text;

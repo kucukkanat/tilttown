@@ -89,17 +89,22 @@ function storefront(c, em, sw, R, A) {
     bx(body, sw + .16, .05, .09, col, 0, F + .02, .02);
     if (style === 'arch') { const a = paint(new THREE.TorusGeometry(sw / 2, .045, 4, 12, Math.PI), col); a.applyMatrix4(at(0, top - .02, .03)); body.push(a); }
   };
+  let awTop = -1; // highest point of an awning against the wall, so the name board can sit above it
   const fascia = (col, letter, y = .47, w = sw + .14, h = .15) => {
-    bx(body, w, h, .06, col, 0, y, .02); bx(plain, w + .04, .03, .09, dk, 0, y + h / 2 + .01, .03); bx(plain, w + .04, .025, .08, dk, 0, y - h / 2 - .01, .03);
-    lbls.push(labelGeo(sKey, shopNm, {bg: hex(col), fg: hex(letter)}, w * .97, h * .9).applyMatrix4(at(0, y, .052)));
+    y = Math.max(y, awTop + h / 2 + .02);
+    const z = .06, d = .14; // a deep board standing proud of the facade, so ledges, windows and lamps behind it don't cover the name
+    bx(body, w, h, d, col, 0, y, z); bx(plain, w + .04, .03, d + .03, dk, 0, y + h / 2 + .01, z + .01); bx(plain, w + .04, .025, d + .02, dk, 0, y - h / 2 - .01, z + .01);
+    lbls.push(labelGeo(sKey, shopNm, {bg: hex(col), fg: hex(letter)}, w * .97, h * .9).applyMatrix4(at(0, y, z + d / 2 + .005)));
+    return y + h / 2; // top of the board
   };
   const stripedAwning = (aw, depth, tilt, n, y = .36, scallop = true) => {
+    awTop = Math.max(awTop, y + Math.sin(tilt) * depth / 2 + .03);
     for (let s = 0; s < n; s++) plain.push(box(aw / n, .04, depth, s % 2 ? k2 : k1, at(-aw / 2 + aw / n * (s + .5), y, depth / 2 - .02, 0, tilt)));
     if (scallop) scallops(mul(em, tr(0, y - .36 - Math.sin(tilt) * (depth - .55), depth - .55)), aw, k1, k2, flutter);
     for (const s of [-1, 1]) bx(plain, .012, .012, depth, '#2a2622', s * aw / 2, y - .02, depth / 2 - .02, 0, tilt);
   };
   const domeAwning = (aw, col, y = .34) => { const g = paint(new THREE.CylinderGeometry(.22, .22, aw, 12, 1, true, 0, Math.PI), col); g.applyMatrix4(at(0, y, .02, 0, Math.PI / 2, Math.PI / 2)); flutter.push(g); for (let q = 0; q <= 4; q++) { const a = paint(new THREE.TorusGeometry(.222, .006, 3, 10, Math.PI), '#2a2622'); a.applyMatrix4(at(-aw / 2 + q * aw / 4, y, .02, Math.PI / 2)); plain.push(a); } };
-  const flatAwning = (aw, col, band, y = .36, depth = .45) => { flutter.push(box(aw, .03, depth, col, at(0, y, depth / 2, 0, .22))); flutter.push(box(aw, .1, .012, band, at(0, y - .06 - depth * .22, depth - .01))); };
+  const flatAwning = (aw, col, band, y = .36, depth = .45) => { awTop = Math.max(awTop, y + Math.sin(.22) * depth / 2 + .03); flutter.push(box(aw, .03, depth, col, at(0, y, depth / 2, 0, .22))); flutter.push(box(aw, .1, .012, band, at(0, y - .06 - depth * .22, depth - .01))); };
   const plate = (x, y = .07) => { out.plate = {m: at(x, y, .072), g: [box(.11, .055, .006, '#efe3c8', tr(0, 0, .004)), box(.07, .008, .007, '#2f5a3a', tr(0, .006, .006)), box(.05, .008, .007, '#2f5a3a', tr(0, -.01, .006)), box(.11, .055, .006, '#b8342a', tr(0, 0, -.004)), box(.07, .008, .007, '#f4ecdc', tr(0, 0, -.006)), box(.004, .05, .004, '#2a2622', tr(0, .045, 0, 0, 0, .5)), box(.004, .05, .004, '#2a2622', tr(0, .045, 0, 0, 0, -.5))]}; };
   const swingSign = (x) => { out.swing = hangingSign(type, em, x, plain, signG); };
   const ledge = (x, w) => bx(plain, w + .06, .03, .09, dk, x, F + .3, .06);
@@ -109,8 +114,8 @@ function storefront(c, em, sw, R, A) {
     case 'cafe': {
       surround(dk, .36); bx(body, gw + .06, .16, .05, dk, gx, F + .08, .025);
       glass(gx, -.02, gw, .58, 2 + Math.floor(R() * 2), 1); door(dx, k1); windowGoods(type, em, sw, R, plain);
-      stripedAwning(sw + .2, .55, .38, 7 + 2 * Math.floor(R() * 2), .36, true); fascia(dk, '#e8d8a8');
-      bx(plain, .16, .22, .015, '#1e1e1e', dx + L * .26, F + .14, .2, L * .3, -.2); bx(plain, .18, .24, .01, '#5a3a28', dx + L * .26, F + .14, .19, L * .3, -.2); lamp(-dx, .52 + .04);
+      stripedAwning(sw + .2, .55, .38, 7 + 2 * Math.floor(R() * 2), .36, true); const fTop = fascia(dk, '#e8d8a8');
+      bx(plain, .16, .22, .015, '#1e1e1e', dx + L * .26, F + .14, .2, L * .3, -.2); bx(plain, .18, .24, .01, '#5a3a28', dx + L * .26, F + .14, .19, L * .3, -.2); lamp(-dx, fTop + .12);
       swingSign(-L * (sw / 2 + .06)); plate(dx); out.shop = {m: at(gx, .27, .07), sw: gw}; break;
     }
     case 'bakery': {
