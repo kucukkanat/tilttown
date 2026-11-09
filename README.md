@@ -26,3 +26,13 @@ python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
 Deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main`.
+
+## Progression and life (Nov 2026)
+- Guided first street: 6 steps with a glowing marker and €100 rewards, then daily goals take over
+- Town level from stars, goal tracker chip, level-up fireworks
+- Residents show needs (🍞 ☕ 🌳 💡) above their heads; tap one to fix it
+- Coins pop on sales; rent drips in hourly
+- Plot value (river, plazas, trees, lamps, shops, crowding) sets rent; Value map mode
+- Shop location bonuses and penalties, terrace and second-counter upgrades
+- Districts (Old Town, Riverside, Market) painted from Land › District; Districts map mode
+- Seasons every 5 days, regatta event, evening plaza crowds, rooftop cats; press H to frame the town
