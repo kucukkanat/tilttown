@@ -6,12 +6,14 @@ A painterly city builder in the browser: build a crooked, Porto-style riverside 
 
 ## Features
 - Procedural houses, shops, cafés, plazas, landmarks, trees and lamps on a floating island with a river and waterfall
+- Organic layout: irregular plots, terraced rows that join neighbouring houses, archways over alleys, garden spots beside houses, ivy on terrace drops
 - Simulated citizens with daily plans, an economy, goals, requests, events and scenarios
 - Illustrated (hand-drawn lines, flat colour) and painterly looks, five lighting presets, weather and day/night
 - Mobile-first controls: thumb-zone dock, build and land trays, shops managed from each house's card, press-and-hold build wheel, bottom-sheet cards, map view and status pins
 
 ## Controls
 - **Touch:** tap to select, drag to orbit, pinch to zoom, press and hold a plot for the build wheel
+- **Gardens:** pick Tree or Lamp and tap a house to plant up to two in its garden
 - **Shops:** tap any house to open, change or close its shop from the card
 - **Time shortcut:** press and hold the clock button, then slide left or right to scrub the time of day
 - **Keyboard:** 1–5 build tools, R/F raise/lower, X erase, L look, Space pause, M map, T time, Esc back, Ctrl/Cmd+Z undo

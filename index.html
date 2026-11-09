@@ -605,6 +605,7 @@ function rebuildLaundry() {
   if (festLit.length) laundryG.add(mkMesh(festLit, litMat, false));
   if (g.length) laundryG.add(mkMesh(g, swayMat, true));
   if (wires.length) laundryG.add(mkMesh(wires, plainMat, true));
+  { const pl = [], bo = [], ro = []; buildJoins(pl, bo, ro); if (bo.length) laundryG.add(mkMesh(bo, bodyMat, true)); if (ro.length) laundryG.add(mkMesh(ro, roofMat, true)); if (pl.length) laundryG.add(mkMesh(pl, plainMat, true)); }
   if (stairs.length) laundryG.add(mkMesh(stairs, stoneMat, true));
 }
 
@@ -674,14 +675,16 @@ function buildPlaza(c) {
   body.push(cyl(.08, .12, .55, '#b8aa98', tr(0, .4, 0), 8)); body.push(cyl(.22, .12, .08, '#b8aa98', tr(0, .7, 0), 12)); plain.push(cyl(.18, .18, .02, '#5a9aa6', tr(0, .74, 0), 12)); }
   for (const [x, z, ry] of [[0, .82, Math.PI], [0, -.82, 0]]) { const pm = tr(x, 0, z, ry); plain.push(box(.62, .05, .2, '#6a4a30', mul(pm, tr(0, .22, 0)))); plain.push(box(.62, .16, .04, '#6a4a30', mul(pm, tr(0, .36, -.09)))); for (const bx of [-.26, .26]) plain.push(box(.04, .22, .2, '#2a2622', mul(pm, tr(bx, .11, 0)))); }
   for (const [x, z] of [[.75, .75], [-.75, -.75]]) { plain.push(cyl(.14, .11, .2, '#a0583a', tr(x, .1, z), 8)); plain.push(paint(new THREE.IcosahedronGeometry(.2, 0), '#5f7a35').applyMatrix4(tr(x, .34, z))); }
-  return {plain, body, glows: []};
+  const sway = []; for (const [x, z] of [[.78, -.78], [-.78, .78]]) { plain.push(cyl(.04, .07, .9, '#5a4232', tr(x, .45, z), 6)); const base = pick(R, ['#d9772b', '#c4502b', '#e0a23a', '#6f8a3a']); for (let q = 0; q < 4; q++) sway.push(paint(new THREE.IcosahedronGeometry(.24 + R() * .1, 1), jit(base, R, .08)).applyMatrix4(tr(x + (R() - .5) * .3, 1.05 + R() * .3, z + (R() - .5) * .3))); }
+  sway.forEach(g => { const p = g.attributes.position, a = new Float32Array(p.count); for (let i = 0; i < p.count; i++) a[i] = Math.max(0, p.getY(i) - .5) * .05; g.setAttribute('sway', new THREE.BufferAttribute(a, 1)); });
+  return {plain, body, sway, glows: []};
 }
 function rebuildTerrain(c) {
   if (c.tmesh) { terrainG.remove(c.tmesh); c.tmesh.traverse(o => o.geometry && o.geometry.dispose()); c.tmesh = null; }
   if (c.water) return;
   const R = rng(c.seed + 5), h = (c.lvl + 1) * LV;
   const m = mkMesh([box(S, h, S, jit('#a89a88', R, .05), tr(0, -LV + h / 2, 0))], stoneMat, true);
-  const wild = c.owned === false, top = wild ? mkMesh([box(S - .02, .05, S - .02, jit('#6f7a48', R, .08), tr(0, c.lvl * LV + .02, 0)), ...Array.from({length: 4}, () => paint(new THREE.IcosahedronGeometry(.15 + R() * .15, 0), jit('#5a6a35', R, .1)).applyMatrix4(mul(tr((R() - .5) * 1.6, c.lvl * LV + .1, (R() - .5) * 1.6), new THREE.Matrix4().makeScale(1, .6, 1))))], plainMat, true) : mkMesh([box(S - .02, .03, S - .02, jit('#b8aa98', R, .05), tr(0, c.lvl * LV + .01, 0))], cobbleMat, false); top.userData.cell = c; m.add(top); m.position.set(wx(c.i), 0, wx(c.j)); m.userData.cell = c; terrainG.add(m); c.tmesh = m;
+  const wild = c.owned === false, top = wild ? mkMesh([box(S - .02, .05, S - .02, jit('#6f7a48', R, .08), tr(0, c.lvl * LV + .02, 0)), ...Array.from({length: 4}, () => paint(new THREE.IcosahedronGeometry(.15 + R() * .15, 0), jit('#5a6a35', R, .1)).applyMatrix4(mul(tr((R() - .5) * 1.6, c.lvl * LV + .1, (R() - .5) * 1.6), new THREE.Matrix4().makeScale(1, .6, 1))))], plainMat, true) : mkMesh([box(S - .02, .03, S - .02, jit('#b8aa98', R, .05), tr(0, c.lvl * LV + .01, 0))], cobbleMat, false); top.userData.cell = c; m.add(top); m.position.set(wx(c.i), 0, wx(c.j)); m.userData.cell = c; { const dr = terrainDressing(c); if (dr) m.add(dr); } terrainG.add(m); c.tmesh = m;
 }
 function rebuildObj(c) {
   if (c.obj) { objG.remove(c.obj); c.obj.traverse(o => o.geometry && o.geometry.dispose()); c.obj = null; }
@@ -694,6 +697,7 @@ function rebuildObj(c) {
   else if (c.kind === 'church') parts = buildChurch(c);
   c.glows = []; c.chims = [];
   if (!parts) return;
+  if (c.floors > 0) { const y = buildYard(c); parts.sway = [...(parts.sway || []), ...y.sway]; parts.plain = [...(parts.plain || []), ...y.plain]; parts.glows = [...(parts.glows || []), ...y.glows]; }
   const g = new THREE.Group();
   if (c.floors > 0) houseLit(c);
   if (parts.shopGlass?.length) { const im = mkMesh(parts.shopGlass, interiorMat(c), false); im.layers.enable(1); g.add(im); }
@@ -705,10 +709,11 @@ function rebuildObj(c) {
   }
   const y = c.kind === 'bridge' ? 0 : topY(c);
   g.position.set(wx(c.i), y, wx(c.j)); g.userData.cell = c;
+  if (c.floors > 0) { const J = rng(c.seed * 3 + 11); g.position.x += (J() - .5) * .1; g.position.z += (J() - .5) * .1; g.rotation.y = (J() - .5) * .07; }
   g.traverse(o => o.userData.cell = c);
   objG.add(g); c.obj = g; hookMap(g, c);
-  c.glows = parts.glows.map(v => { const w = v.clone().add(g.position); w.thr = v.thr ?? .2; return w; });
-  c.chims = (parts.chims || []).map(v => v.clone().add(g.position));
+  c.glows = parts.glows.map(v => { const w = warpV(v.clone().applyMatrix4(g.matrixWorld)); w.thr = v.thr ?? .2; return w; });
+  c.chims = (parts.chims || []).map(v => warpV(v.clone().applyMatrix4(g.matrixWorld)));
 }
 
 /* ---------- glows & leaves ---------- */
@@ -1006,6 +1011,127 @@ function rebuildBiz() {
 
 /* business frontage spill: tables, stands, queue spots */
 const bizSpillG = new THREE.Group(); scene.add(bizSpillG);
+
+/* ==========================================================================
+   ORGANIC TOWN: irregular plot grid (baked warp), terraced joins, archways,
+   yard spots, ivy on drops, broken island edge
+   ========================================================================== */
+const LAT = {key: null, off: null}, WARP_AMT = .21;
+function latEnsure() {
+  const key = cells.length ? cells[0].seed + ':' + cells[N + 1].seed : null; if (LAT.key === key) return;
+  LAT.key = key; const M = N + 1, R = rng(((cells.length ? cells[0].seed : 1) | 0) + 777); LAT.off = new Float32Array(M * M * 2);
+  for (let a = 1; a < N; a++) for (let b = 1; b < N; b++) { const k = (a * M + b) * 2; LAT.off[k] = (R() - .5) * 2 * S * WARP_AMT; LAT.off[k + 1] = (R() - .5) * 2 * S * WARP_AMT; }
+}
+const _wd = {x: 0, y: 0};
+function warpD(x, z, out = _wd) {
+  latEnsure(); const half = N * S / 2, u = (x + half) / S, v = (z + half) / S;
+  if (!LAT.off || u <= 0 || v <= 0 || u >= N || v >= N) { out.x = 0; out.y = 0; return out; }
+  const a = Math.floor(u), b = Math.floor(v), fu = u - a, fv = v - b, M = N + 1, O = LAT.off;
+  const k00 = (a * M + b) * 2, k10 = ((a + 1) * M + b) * 2, k01 = (a * M + b + 1) * 2, k11 = ((a + 1) * M + b + 1) * 2;
+  out.x = (O[k00] * (1 - fu) + O[k10] * fu) * (1 - fv) + (O[k01] * (1 - fu) + O[k11] * fu) * fv;
+  out.y = (O[k00 + 1] * (1 - fu) + O[k10 + 1] * fu) * (1 - fv) + (O[k01 + 1] * (1 - fu) + O[k11 + 1] * fu) * fv;
+  return out;
+}
+function warpV(v) { const d = warpD(v.x, v.z); v.x += d.x; v.z += d.y; return v; }
+const _wv = new THREE.Vector3(), _wi = new THREE.Matrix4();
+function warpObject(root) {
+  root.updateMatrixWorld(true);
+  root.traverse(o => {
+    if (!(o.isMesh || o.isLine || o.isPoints) || o.isInstancedMesh || !o.geometry || o.userData.noWarp) return;
+    const g = o.geometry.userData.warped ? o.geometry : o.geometry.clone(); if (g.userData.warped) return;
+    const p = g.attributes.position; if (!p) return; _wi.copy(o.matrixWorld).invert();
+    for (let i = 0; i < p.count; i++) { _wv.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); warpV(_wv); _wv.applyMatrix4(_wi); p.setXYZ(i, _wv.x, _wv.y, _wv.z); }
+    p.needsUpdate = true; g.userData.warped = true; g.computeBoundingSphere(); g.computeBoundingBox(); o.geometry = g;
+  });
+}
+[terrainG, objG, laundryG, bizSpillG].forEach(G => { const add = G.add.bind(G); G.add = (...objs) => { objs.forEach(warpObject); return add(...objs); }; });
+
+/* ---- terraced joins between neighbouring houses + archways over alleys ---- */
+function buildJoins(plain, body, roof) {
+  const done = new Set();
+  for (const c of cells) {
+    if (!(c.floors > 0)) continue;
+    for (const [dx, dz] of [[1, 0], [0, 1]]) {
+      const n = cellAt(c.i + dx, c.j + dz); if (!n || !(n.floors > 0)) continue;
+      const R = rng(c.seed * 13 + n.seed), y0 = Math.min(topY(c), topY(n)), y1 = Math.min(topY(c) + c.floors * FH, topY(n) + n.floors * FH) - .06;
+      if (y1 - y0 < .4) continue;
+      const cx = (wx(c.i) + wx(n.i)) / 2, cz = (wx(c.j) + wx(n.j)) / 2, along = dx ? 'z' : 'x';
+      const w = .74, d = 1.15 + R() * .25, h = y1 - y0, col = jit(pick(R, ['#d9b48a', '#c98a6a', '#e3cfa6', '#b8a58c', '#d7a07a']), R, .06);
+      const m = tr(cx + (along === 'x' ? (R() - .5) * .2 : 0), y0 + h / 2, cz + (along === 'z' ? (R() - .5) * .2 : 0));
+      body.push(along === 'z' ? box(w, h, d, col, m) : box(d, h, w, col, m));
+      const rm = tr(cx, y1 + .07, cz, along === 'z' ? Math.PI / 2 : 0);
+      roof.push(box(d + .08, .14, w + .1, jit('#a8452e', R, .08), rm));
+      if (h > FH * 1.4 && R() < .55) { const wy = y0 + FH * (1.4 + Math.floor(R() * Math.max(1, h / FH - 1.6))); const off = (along === 'z' ? [w / 2 + .01, 0] : [0, w / 2 + .01]);
+        for (const s of [1, -1]) plain.push(box(along === 'z' ? .02 : .26, .38, along === 'z' ? .26 : .02, '#2a2a3a', tr(cx + off[0] * s, wy, cz + off[1] * s))); }
+    }
+  }
+  // archways: a one-tile walkway between two tall houses on opposite sides
+  for (const c of cells) {
+    if (c.floors > 0 || c.water || c.kind) continue;
+    for (const [dx, dz] of [[1, 0], [0, 1]]) {
+      const a = cellAt(c.i - dx, c.j - dz), b = cellAt(c.i + dx, c.j + dz); if (!a || !b || a.floors < 3 || b.floors < 3) continue;
+      const key = c.i * N + c.j + ':' + dx; if (done.has(key)) continue; done.add(key);
+      const R = rng(c.seed * 7 + 3), base = Math.max(topY(a), topY(b), topY(c)) + FH * 1.7, h = FH * .95, col = jit(pick(R, ['#d9b48a', '#e3cfa6', '#c98a6a']), R, .05);
+      const span = S + .5, x = wx(c.i), z = wx(c.j), along = dx ? 'x' : 'z';
+      body.push(along === 'x' ? box(span, h, .9, col, tr(x, base + h / 2, z)) : box(.9, h, span, col, tr(x, base + h / 2, z)));
+      roof.push(along === 'x' ? box(span + .1, .12, 1.0, jit('#a8452e', R, .08), tr(x, base + h + .06, z)) : box(1.0, .12, span + .1, jit('#a8452e', R, .08), tr(x, base + h + .06, z)));
+      const arch = paint(new THREE.TorusGeometry(.62, .07, 6, 14, Math.PI), '#8a7a66');
+      for (const s of [1, -1]) { const g = arch.clone(); g.applyMatrix4(mul(tr(x + (along === 'z' ? s * .46 : 0), base, z + (along === 'x' ? s * .46 : 0), along === 'x' ? 0 : Math.PI / 2), new THREE.Matrix4().makeRotationZ(Math.PI))); plain.push(g); }
+      for (const s of [1, -1]) plain.push(box(.34, .28, .04, '#2a2a3a', tr(x + (along === 'z' ? s * .47 : (R() - .5) * .6), base + h * .55, z + (along === 'x' ? s * .47 : (R() - .5) * .6))));
+    }
+  }
+}
+
+/* ---- yard spots: small trees, lamps and pots beside a house ---- */
+function yardSpots(c) {
+  const k = frontFace(c), f = k === undefined ? [0, 1] : DIRS[k], back = [-f[0], -f[1]], side = [f[1], -f[0]];
+  return [[back[0] * .74 + side[0] * .64, back[1] * .74 + side[1] * .64], [back[0] * .74 - side[0] * .64, back[1] * .74 - side[1] * .64]];
+}
+function buildYard(c) {
+  const sway = [], plain = [], glows = [], R = rng(c.seed * 17 + 1), spots = yardSpots(c), items = [...(c.yard || [])];
+  if (!items.length && R() < .45) items.push('pots');
+  items.slice(0, 2).forEach((it, n) => {
+    const [x, z] = spots[n];
+    if (it === 'tree') {
+      plain.push(cyl(.035, .06, .7, '#5a4232', tr(x, .35, z), 6));
+      const base = pick(R, ['#d9772b', '#c4502b', '#e0a23a', '#6f8a3a', '#a8432b']);
+      for (let q = 0; q < 4; q++) sway.push(paint(new THREE.IcosahedronGeometry(.2 + R() * .1, 1), jit(base, R, .08)).applyMatrix4(tr(x + (R() - .5) * .3, .85 + R() * .3, z + (R() - .5) * .3)));
+    } else if (it === 'lamp') {
+      plain.push(cyl(.025, .035, 1.1, '#2a2622', tr(x, .55, z), 6)); plain.push(box(.14, .16, .14, '#2a2622', tr(x, 1.15, z)));
+      const g = new THREE.Vector3(x, 1.12, z); g.thr = .25; glows.push(g);
+    } else {
+      for (let q = 0; q < 3; q++) { const px = x + (R() - .5) * .35, pz = z + (R() - .5) * .35; plain.push(cyl(.08, .06, .14, pick(R, ['#a0583a', '#b8683a', '#8a5a3a']), tr(px, .07, pz), 7)); sway.push(paint(new THREE.IcosahedronGeometry(.11 + R() * .05, 0), jit(pick(R, ['#4f6a32', '#6a7a3a', '#c4502b', '#e0a23a']), R, .08)).applyMatrix4(tr(px, .22, pz))); }
+    }
+  });
+  sway.forEach(g => { const p = g.attributes.position, a = new Float32Array(p.count); for (let i = 0; i < p.count; i++) a[i] = Math.max(0, p.getY(i) - .3) * .05; g.setAttribute('sway', new THREE.BufferAttribute(a, 1)); });
+  return {sway, plain, glows};
+}
+
+/* ---- ivy on level drops and a broken, planted island edge ---- */
+function terrainDressing(c) {
+  if (c.water || c.owned === false) return null;
+  const R = rng(c.seed * 23 + 5), sway = [], plain = [], y = c.lvl * LV;
+  DIRS.forEach(([dx, dz]) => {
+    const n = cellAt(c.i + dx, c.j + dz), drop = !n ? 0 : n.water ? 0 : c.lvl - n.lvl, edge = !n;
+    if (drop > 0 && R() < .75) {
+      const cnt = 6 + Math.floor(R() * 8), along = [dz, dx];
+      for (let q = 0; q < cnt; q++) { const t = (R() - .5) * 1.8, hang = R() * Math.min(drop * LV, 1.1);
+        const g = paint(new THREE.IcosahedronGeometry(.08 + R() * .07, 0), jit(pick(R, R() < .25 ? ['#a8432b', '#c4602b'] : ['#4f6a32', '#5f7a3a', '#3f5a2a']), R, .1));
+        g.applyMatrix4(tr(dx * (S / 2 + .03) + along[0] * t, y - hang, dz * (S / 2 + .03) + along[1] * t)); sway.push(g); }
+    }
+    if (edge && R() < .8) {
+      const along = [dz, dx];
+      for (let q = 0; q < 3; q++) { const t = (R() - .5) * 1.6, s = .14 + R() * .2;
+        plain.push(paint(new THREE.DodecahedronGeometry(s, 0), jit(pick(R, ['#9a8a78', '#8a7a6a', '#a89a88']), R, .06)).applyMatrix4(tr(dx * (S / 2 - .1) + along[0] * t, y + s * .4, dz * (S / 2 - .1) + along[1] * t)));
+        if (R() < .7) sway.push(paint(new THREE.IcosahedronGeometry(.12 + R() * .1, 0), jit(pick(R, ['#5f7a3a', '#6a7a3a', '#c4502b']), R, .08)).applyMatrix4(tr(dx * (S / 2 - .25) + along[0] * (t + .2), y + .12, dz * (S / 2 - .25) + along[1] * (t + .2)))); }
+    }
+  });
+  sway.forEach(g => { const p = g.attributes.position, a = new Float32Array(p.count); for (let i = 0; i < p.count; i++) a[i] = .02; g.setAttribute('sway', new THREE.BufferAttribute(a, 1)); });
+  if (!sway.length && !plain.length) return null;
+  const grp = new THREE.Group(); if (sway.length) grp.add(mkMesh(sway, swayMat, false)); if (plain.length) grp.add(mkMesh(plain, plainMat, true));
+  return grp;
+}
+
 let publicSeats = [], railSpots = [];
 function seatAt(pm, x, z, faceX, faceZ) { const p = new THREE.Vector3(x, 0, z).applyMatrix4(pm), f = new THREE.Vector3(faceX, 0, faceZ).applyMatrix4(pm); return {pos: p, yaw: Math.atan2(f.x - p.x, f.z - p.z), by: null}; }
 function bizSpill(b) {
@@ -1475,7 +1601,7 @@ function poseAll(t) {
     const ph = z.phase, walk = z.moving ? 1 : 0;
     const dance = z.state === 'dance' ? Math.abs(Math.sin(t * 6 + (z.dancePh || 0))) * .05 : 0; if (z.state === 'dance') z.yaw += .01;
     const by = (sit ? z.pos.y + .25 - HIP * s : z.pos.y + walk * Math.abs(Math.cos(ph)) * .012 * s) + dance;
-    _B.compose(_V.set(z.pos.x, by, z.pos.z), _Q.setFromEuler(_E.set(0, z.yaw, 0)), _S.set(s * z.bw, s, s * z.bw));
+    warpD(z.pos.x, z.pos.z); _B.compose(_V.set(z.pos.x + _wd.x, by, z.pos.z + _wd.y), _Q.setFromEuler(_E.set(0, z.yaw, 0)), _S.set(s * z.bw, s, s * z.bw));
     const idle = Math.sin(t * 1.3 + z.id) * .025;
     // hips + torso
     _P.copy(_B).multiply(R4(0, HIP, 0, 0, walk * Math.sin(ph) * .08 + idle * .3, walk * Math.sin(ph) * .03)); set('pelvis', i, _P);
@@ -1521,7 +1647,7 @@ function poseAll(t) {
     set('cart', i, z.step?.act === 'deliver' && (z.state === 'go' || z.state === 'idle') ? _X0.copy(_B).multiply(R4(0, 0, .3)) : ZM);
     set('cane', i, z.cane && !sit && !umbOn ? handR.clone().multiply(R4(0, 0, .01, -(aR - eR) - .05)) : ZM);
     set('umb', i, umbOn ? handR.clone().multiply(R4(0, 0, 0, -(aR - eR) - .1)) : ZM);
-    if (z.dog && z.dog.on) set('dog', i, _X0.compose(_V.copy(z.dog.pos).setY(z.dog.pos.y + (z.moving ? Math.abs(Math.sin(z.phase * 1.3)) * .015 : 0)), _Q.setFromEuler(_E.set(0, z.dog.yaw, 0)), _S.setScalar(z.dog.s))); else set('dog', i, ZM);
+    if (z.dog && z.dog.on) set('dog', i, _X0.compose(warpV(_V.copy(z.dog.pos)).setY(z.dog.pos.y + (z.moving ? Math.abs(Math.sin(z.phase * 1.3)) * .015 : 0)), _Q.setFromEuler(_E.set(0, z.dog.yaw, 0)), _S.setScalar(z.dog.s))); else set('dog', i, ZM);
   });
   Object.values(P).forEach(m => m.instanceMatrix.needsUpdate = true);
 }
@@ -1535,7 +1661,7 @@ function updateBubbles() {
   for (const z of citizens) {
     if (k >= bubblePool.length) break;
     if (!z.bubble || z.bubble.until < nowR || z.state === 'inside') continue;
-    const p = z.pos.clone(); p.y += .75 * z.s; if (p.distanceTo(camera.position) > 26) continue;
+    const p = warpV(z.pos.clone()); p.y += .75 * z.s; if (p.distanceTo(camera.position) > 26) continue;
     p.project(camera); if (p.z > 1 || Math.abs(p.x) > 1 || Math.abs(p.y) > 1) continue;
     const d = bubblePool[k++]; d.textContent = z.bubble.text; d.style.transform = `translate(${(p.x * .5 + .5) * innerWidth}px,${(-p.y * .5 + .5) * innerHeight}px) translate(-50%,-100%)`; d.style.opacity = 1;
   }
@@ -1662,7 +1788,7 @@ function pickPerson(e) {
   const k = r.height / (2 * Math.tan(camera.fov * Math.PI / 360));
   let best = null, bd = Infinity;
   for (const z of citizens) {
-    if (z.state === 'inside') continue; const p = z.pos.clone(); p.y += .35 * z.s;
+    if (z.state === 'inside') continue; const p = warpV(z.pos.clone()); p.y += .35 * z.s;
     const dist = camera.position.distanceTo(p); if (dist > hd + .3) continue; // hidden behind what was tapped
     const sz = .75 * z.s / dist * k; // person height in pixels
     let rad = Math.min(22, Math.max(6, sz * .9)); if (onBuilding) rad = Math.min(rad, sz * .55 + 3);
@@ -1673,7 +1799,7 @@ function pickPerson(e) {
 }
 function updateFollow(dt) {
   if (!follow) return; if (follow.state === 'inside') { follow = null; return; }
-  const tg = follow.pos.clone(); tg.y += .3; controls.target.lerp(tg, Math.min(1, dt * 3));
+  const tg = warpV(follow.pos.clone()); tg.y += .3; controls.target.lerp(tg, Math.min(1, dt * 3));
   const off = camera.position.clone().sub(controls.target), len = off.length(); off.setLength(lerp(len, 6, Math.min(1, dt * 1.5))); camera.position.copy(controls.target).add(off);
 }
 
@@ -2144,7 +2270,7 @@ function updateCats(dt, t) {
     if (k.tgt) { const d = k.tgt.clone().sub(k.pos); d.y = 0; const L = d.length(); if (L < .05) { k.tgt = null; k.wait = 3 + Math.random() * 10; k.sit = true; } else { k.pos.addScaledVector(d, Math.min(1, dt * .45 * Math.max(speed, 0) / L)); k.yaw = Math.atan2(d.x, d.z); k.sit = false; const c = cellOf(k.pos); if (c) k.pos.y += (walkY(c) - k.pos.y) * Math.min(1, dt * 4); } }
     else { k.wait -= dt * speed; if (k.wait <= 0 && opts.length) { const here = cellOf(k.pos); const n = opts.filter(c => here && Math.abs(c.i - here.i) + Math.abs(c.j - here.j) <= 1); const c = pick(Math.random, n.length ? n : opts); k.tgt = new THREE.Vector3(wx(c.i) + (Math.random() - .5) * 1.4, walkY(c), wx(c.j) + (Math.random() - .5) * 1.4); } }
     const hide = snowAmt > .6 && !k.tgt;
-    dummy.position.copy(k.pos); dummy.rotation.set(0, k.yaw + (k.sit ? Math.sin(t * .3 + i) * .2 : 0), 0); dummy.scale.set(1, k.sit ? .85 : 1, k.sit ? .8 : 1); if (hide) dummy.scale.setScalar(0);
+    dummy.position.copy(k.pos); warpV(dummy.position); dummy.rotation.set(0, k.yaw + (k.sit ? Math.sin(t * .3 + i) * .2 : 0), 0); dummy.scale.set(1, k.sit ? .85 : 1, k.sit ? .8 : 1); if (hide) dummy.scale.setScalar(0);
     dummy.updateMatrix(); catMesh.setMatrixAt(i, dummy.matrix);
   });
   catMesh.instanceMatrix.needsUpdate = true;
@@ -2156,7 +2282,7 @@ function colHex(c) { return c ? '#' + c.getHexString() : null; }
 function serialize() {
   const idx = c => c ? c.i * N + c.j : -1;
   return {v: 1, day, hour, funds, preset: PRESETS.indexOf(preset), weather, festNight, unlocked, tram: tram && {cells: tram.cells}, funi: funi && {a: funi.a, b: funi.b, rise: funi.rise, k: funi.k}, ledger: {...ledger, closed: [], moved: []}, paper: paper.slice(-3),
-    cells: cells.map(c => [c.lvl, c.water ? 1 : 0, c.floors, c.kind || 0, c.biz || 0, c.bizName || 0, c.seed, c.owned === false ? 0 : 1, Math.round((c.cond ?? 1) * 100) / 100, c.style || 0, c.broken ? 1 : 0, c.statue ? 1 : 0]),
+    cells: cells.map(c => [c.lvl, c.water ? 1 : 0, c.floors, c.kind || 0, c.biz || 0, c.bizName || 0, c.seed, c.owned === false ? 0 : 1, Math.round((c.cond ?? 1) * 100) / 100, c.style || 0, c.broken ? 1 : 0, c.statue ? 1 : 0, c.yard && c.yard.length ? c.yard.join(',') : 0]),
     meta: {stars, landBought, quayWalls, scen: {...scen}, notables: Object.fromEntries(Object.entries(notables).map(([k, z]) => [k, citizens.indexOf(z)])), stories: stories.map(s => ({id: s.id, zi: citizens.indexOf(s.z), step: s.step, done: s.done})), nata: nataCell ? nataCell.i * N + nataCell.j : -1, stage: stageCell ? stageCell.i * N + stageCell.j : -1},
     biz: businesses.map(b => [idx(b.cell), Math.round(b.cash), Math.round(b.rev), b.hist, b.visits]),
     cit: citizens.map(z => ({n: z.name, m: z.male ? 1 : 0, r: z.role, a: z.age, h: idx(z.home), w: z.work && z.work !== 'away' ? idx(z.work.cell) : -1, p: z.parent ? citizens.indexOf(z.parent) : -1, wl: Math.round(z.wallet || 0), s: z.seedN || 1, ch: z.chatty ? 1 : 0, d: z.dog ? [colHex(z.dog.c), z.dog.s] : 0, f: z.fav ? idx(z.fav.cell) : -1,
@@ -2164,7 +2290,7 @@ function serialize() {
 }
 function loadTown(D) {
   cells.forEach(c => { if (c.tmesh) terrainG.remove(c.tmesh); if (c.obj) objG.remove(c.obj); }); businesses = []; closeCard();
-  cells = D.cells.map((a, k) => ({i: Math.floor(k / N), j: k % N, lvl: a[0], water: !!a[1], floors: a[2], kind: a[3] || null, biz: a[4] || null, bizName: a[5] || null, seed: a[6], tmesh: null, obj: null, glows: [], owned: a[7] !== 0, cond: a[8] ?? 1, style: a[9] || null, broken: !!a[10], statue: !!a[11]}));
+  cells = D.cells.map((a, k) => ({i: Math.floor(k / N), j: k % N, lvl: a[0], water: !!a[1], floors: a[2], kind: a[3] || null, biz: a[4] || null, bizName: a[5] || null, seed: a[6], tmesh: null, obj: null, glows: [], owned: a[7] !== 0, cond: a[8] ?? 1, style: a[9] || null, broken: !!a[10], statue: !!a[11], yard: a[12] ? String(a[12]).split(',') : []}));
   const M_ = D.meta || {}; stars = Math.max(stars, M_.stars || 0); landBought = M_.landBought || 0; quayWalls = !!M_.quayWalls; scen = M_.scen || {id: 'free'}; nataCell = M_.nata >= 0 ? cells[M_.nata] : null; stageCell = M_.stage >= 0 ? cells[M_.stage] : null; events = []; resetDayStats();
   day = D.day; hour = D.hour; funds = D.funds; preset = PRESETS[D.preset] || PRESETS[0]; weather = D.weather || 'auto'; festNight = D.festNight ?? -1; unlocked = D.unlocked || unlocked; ledger = D.ledger || ledger; paper = D.paper || [];
   tram = D.tram ? {...D.tram, t: 0, dir: 1, wait: 0} : null; funi = D.funi ? {...D.funi, t: 0, dir: 1, wait: 0} : null;
@@ -2792,7 +2918,7 @@ function buildWaterDist() {
   const W = 64, data = waterU.uDist.value.image.data, half = N * S / 2;
   const land = cells.filter(c => !c.water);
   for (let r = 0; r < W; r++) for (let q = 0; q < W; q++) {
-    const x = (q + .5) / W * N * S - half, z = (r + .5) / W * N * S - half; let d = 9;
+    const px_ = (q + .5) / W * N * S - half, pz_ = (r + .5) / W * N * S - half; let x = px_, z = pz_; for (let it = 0; it < 4; it++) { const d0 = warpD(x, z); x = px_ - d0.x; z = pz_ - d0.y; } let d = 9;
     const ci = Math.floor((x + half) / S), cj = Math.floor((z + half) / S), here = cellAt(ci, cj);
     if (here && !here.water) d = 0; else for (const c of land) { const cx = wx(c.i), cz = wx(c.j), ddx = Math.max(0, Math.abs(x - cx) - S / 2), ddz = Math.max(0, Math.abs(z - cz) - S / 2); d = Math.min(d, Math.hypot(ddx, ddz)); }
     data[r * W + q] = Math.min(255, d / 1.4 * 255);
@@ -3040,7 +3166,7 @@ function updateMapUI() {
   const w = innerWidth, h = innerHeight, near = camera.position.distanceTo(controls.target) < 30;
   businesses.forEach(b => {
     const d = b.mapEl; if (!d) return; const c = b.cell;
-    _mp.set(wx(c.i), topY(c) + c.floors * FH + 1.1, wx(c.j)).project(camera);
+    warpV(_mp.set(wx(c.i), topY(c) + c.floors * FH + 1.1, wx(c.j))).project(camera);
     if (_mp.z > 1) { d.style.display = 'none'; return; }
     d.style.display = ''; d.style.left = ((_mp.x * .5 + .5) * w).toFixed(1) + 'px'; d.style.top = ((-_mp.y * .5 + .5) * h).toFixed(1) + 'px';
     d.querySelector('b').style.display = near ? '' : 'none'; d.querySelector('i').classList.toggle('closed', !(b.open > .5));
@@ -3092,7 +3218,7 @@ const tagEl = document.createElement('div'); tagEl.id = 'tag'; document.body.app
   @media (max-width:700px){#presets{transform-origin:top right}}`; document.head.appendChild(st); }
 function ghostGeo(kind, c) {
   ghost.clear(); const y = topY(c), add = (g, oy = 0) => { const m = new THREE.Mesh(g, ghostMat); m.position.y = oy; ghost.add(m); const l = new THREE.LineSegments(new THREE.EdgesGeometry(g, 20), ghostLine); l.position.y = oy; ghost.add(l); };
-  ghost.position.set(wx(c.i), y, wx(c.j));
+  warpV(ghost.position.set(wx(c.i), y, wx(c.j)));
   if (kind === 'house') { if (c.water) add(new THREE.BoxGeometry(1.4, .3, S), .1); else add(new THREE.BoxGeometry(S * .82, FH, S * .82), (c.floors || 0) * FH + FH / 2); }
   else if (kind === 'tree') { add(new THREE.CylinderGeometry(.08, .12, 1.4, 6), .7); add(new THREE.IcosahedronGeometry(.75, 1), 1.9); }
   else if (kind === 'lamp') { add(new THREE.CylinderGeometry(.04, .06, 1.5, 6), .75); add(new THREE.BoxGeometry(.2, .22, .2), 1.4); }
@@ -3208,7 +3334,7 @@ function updatePins(dt) {
   const zoomed = camera.position.distanceTo(controls.target) < 22;
   pins.forEach(({c, d}) => {
     if (d.dataset.close && !zoomed || c === selCell) { d.style.display = 'none'; return; }
-    _mp.set(wx(c.i), topY(c) + (c.floors || 1) * FH + (c.bizObj ? 1.9 : .9), wx(c.j)).project(camera);
+    warpV(_mp.set(wx(c.i), topY(c) + (c.floors || 1) * FH + (c.bizObj ? 1.9 : .9), wx(c.j))).project(camera);
     if (_mp.z > 1 || far || mapK > .5) { d.style.display = 'none'; return; }
     d.style.display = ''; d.style.left = ((_mp.x * .5 + .5) * w).toFixed(1) + 'px'; d.style.top = ((-_mp.y * .5 + .5) * h).toFixed(1) + 'px';
   });
@@ -3501,15 +3627,16 @@ function apply(c) {
     if (!spend(COST.house, 'a floor')) return;
     const was = c.floors; c.kind = null; c.floors++; if (!was) c.cond = 1; dayStats.floors++; refresh(c, was === 0); pop(c); dust(c); checkGoals();
   } else if (tool === 'tree' || tool === 'lamp') {
-    if (c.water) return; if (c.floors > 0) { say('Erase the house first'); return; }
+    if (c.water) return;
+    if (c.floors > 0) { c.yard ||= []; if (c.yard.length >= 2) { say('This garden is full'); return; } if (!spend(COST[tool], `a ${tool}`)) return; c.yard.push(tool); refresh(c); pop(c); dust(c); return; }
     if (c.kind === tool) return; if (!spend(COST[tool], `a ${tool}`)) return;
     c.kind = tool; refresh(c); pop(c); dust(c);
   } else if (tool === 'erase') {
-    if (c.floors > 0) { refund(COST.house); c.floors--; if (!c.floors) c.biz = null; refresh(c, c.floors === 0); } else if (c.kind) { refund(COST[c.kind] || 0); c.kind = null; refresh(c); }
+    if (c.floors > 0) { refund(COST.house); c.floors--; if (!c.floors) { c.biz = null; c.yard = []; } refresh(c, c.floors === 0); } else if (c.kind) { refund(COST[c.kind] || 0); c.kind = null; refresh(c); }
   } else if (tool === 'raise' || tool === 'lower') {
     if (c.water) return; const nl = c.lvl + (tool === 'raise' ? 1 : -1); if (nl < 0 || nl > 4) return;
     if (!spend(COST.raise, 'terrain work')) return;
-    c.lvl = nl; rebuildTerrain(c); refresh(c, true);
+    c.lvl = nl; rebuildTerrain(c); DIRS.forEach(([dx, dz]) => { const n = cellAt(c.i + dx, c.j + dz); if (n) rebuildTerrain(n); }); refresh(c, true);
   }
 }
 const marker = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S * .98, .05, S * .98)), new THREE.LineBasicMaterial({color: 0xfff0d0, transparent: true, opacity: .8}));
