@@ -3014,7 +3014,10 @@ const legendEl = document.createElement('div'); legendEl.id = 'legend'; legendEl
   .mi i.closed{filter:grayscale(.8) brightness(.8)}
   .mi b{font:600 10px Inter,system-ui,sans-serif;color:#f3e6cc;background:rgba(28,20,16,.72);padding:2px 6px;border-radius:6px;white-space:nowrap}
   .mi:after{content:'';width:2px;height:10px;background:rgba(243,230,204,.7)}
-  #legend{position:fixed;left:12px;top:132px;padding:10px 12px;font-size:12px;display:none;flex-direction:column;gap:5px;max-height:55vh;overflow:auto}
+  #legend{position:fixed;right:12px;left:auto!important;top:calc(14px + env(safe-area-inset-top))!important;bottom:auto!important;padding:8px 12px;font-size:12px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto;z-index:3}
+  #legend .lh{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font:italic 600 14px Fraunces,Georgia,serif;min-height:28px}
+  #legend .lh small{font:500 11px Inter,system-ui,sans-serif;opacity:.65}
+  #legend.min span{display:none}
   #legend.on{display:flex}
   #legend span{display:flex;align-items:center;gap:8px}#legend em{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.25)}
   #mapB.on{background:#f0a35c;color:#24170f}
@@ -3027,7 +3030,7 @@ function buildMapUI() {
     d.onclick = () => houseCard(b.cell, false); b.mapEl = d; mapIconsEl.appendChild(d);
   });
   const types = [...new Set(businesses.map(b => b.type))];
-  legendEl.innerHTML = `<b style="font:italic 600 14px Fraunces,Georgia,serif">Map</b>` + types.map(t => `<span><em style="background:${SHOPCOL[t][0]}"></em>${BIZ[t].label}</span>`).join('') +
+  legendEl.innerHTML = `<div class="lh">Map key<small>${legendEl.classList.contains('min') ? 'show ▾' : 'hide ▴'}</small></div>` + types.map(t => `<span><em style="background:${SHOPCOL[t][0]}"></em>${BIZ[t].label}</span>`).join('') +
     `<span><em style="background:#ead9b6"></em>Homes</span><span><em style="background:#7d8794"></em>Empty homes</span><span><em style="background:#f0c25a"></em>Landmarks</span><span><em style="background:#6f9a4e"></em>Trees</span>`;
 }
 const _mp = new THREE.Vector3();
@@ -3045,6 +3048,7 @@ function updateMapUI() {
 }
 function setMap(on) {
   mapOn = on; mapIconsEl.classList.toggle('on', on); legendEl.classList.toggle('on', on);
+  if (on && legendEl.dataset.init !== '1') { legendEl.dataset.init = '1'; legendEl.classList.toggle('min', innerWidth < 700); legendEl.onclick = () => { legendEl.classList.toggle('min'); const sm = legendEl.querySelector('.lh small'); if (sm) sm.textContent = legendEl.classList.contains('min') ? 'show ▾' : 'hide ▴'; }; }
   document.getElementById('mapB')?.classList.toggle('on', on);
   if (on) { buildMapUI(); say('Map view: shops by type, homes, empty homes'); }
 }
@@ -3211,7 +3215,7 @@ function updatePins(dt) {
 }
 
 /* ---- pins toggle ---- */
-let pinsOn = true; try { pinsOn = localStorage.getItem('tilt-pins') !== '0'; } catch (e) { }
+let pinsOn = false; try { pinsOn = localStorage.getItem('tilt-pins') === '1'; } catch (e) { }
 {
   const bt = document.createElement('button'); bt.className = 'act'; bt.id = 'pinsB'; bt.title = 'Show or hide status pins';
   const sync = () => { bt.textContent = pinsOn ? 'Pins' : 'Pins off'; bt.classList.toggle('on', pinsOn); pinsEl.style.display = pinsOn ? '' : 'none'; };
@@ -3609,7 +3613,7 @@ if (!loaded) generate(1234);
    UI v2: thumb-zone dock, contextual trays, bottom sheet, radial build menu
    ========================================================================== */
 const UI = {tray: null, armed: null};
-const BUILD_ITEMS = ['house', 'plaza', 'landmark', 'tree', 'lamp'], LAND_ITEMS = ['raise', 'lower', 'erase'];
+const BUILD_ITEMS = ['house', 'plaza', 'landmark', 'tree', 'lamp', 'erase'], LAND_ITEMS = ['raise', 'lower'];
 const TLABEL = Object.fromEntries(TOOLS);
 const costOf = id => ({house: COST.house, shop: COST.shop, plaza: COST.plaza, tree: COST.tree, lamp: COST.lamp, raise: COST.raise, lower: COST.lower})[id];
 const svgI = id => `<svg viewBox="0 0 24 24">${ICON[id]}</svg>`;
@@ -3679,7 +3683,7 @@ const DOCK_ICON = {
     #title{display:none}
     #dock{left:8px;right:8px;transform:none;justify-content:space-between}
     #dock>button{flex:1;min-width:0}
-    #legend{bottom:auto!important;top:56px!important}
+    #legend{top:calc(56px + env(safe-area-inset-top))!important;right:10px}
   }
   @media (max-height:520px) and (orientation:landscape){
     #dock{left:auto;right:calc(8px + env(safe-area-inset-right));top:50%;bottom:auto;transform:translateY(-50%);flex-direction:column}
@@ -3779,6 +3783,19 @@ function syncDock() {
   dkLand.querySelector('svg').innerHTML = LAND_ITEMS.includes(tool) ? ICON[tool] : DOCK_ICON.land;
 }
 dkLook.onclick = () => { closeTray(); armTool('look'); };
+{ // easter egg: press and hold the clock, then slide left/right to scrub the time of day
+  let hold = null, scrub = null, skipClick = false;
+  const bub = document.createElement('div'); bub.id = 'scrubBub'; bub.className = 'panel'; document.body.appendChild(bub);
+  const st = document.createElement('style'); st.textContent = `#scrubBub{position:fixed;transform:translate(-50%,-100%);padding:8px 14px;font:600 20px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:none;z-index:7;pointer-events:none}#scrubBub small{display:block;font:500 11px Inter,system-ui,sans-serif;opacity:.7;text-align:center}#dock>button[data-k=time]{touch-action:none}#dock>button.scrub{background:#f0a35c;color:#24170f}`; document.head.appendChild(st);
+  const show = () => { const r = dkTime.getBoundingClientRect(), h = +timeEl.value; bub.style.left = (r.left + r.width / 2) + 'px'; bub.style.top = (r.top - 10) + 'px'; bub.innerHTML = `${hhmm(h)}<small>slide ◂ ▸</small>`; dkTime.querySelector('.clk').textContent = hhmm(h); };
+  dkTime.addEventListener('pointerdown', e => { clearTimeout(hold); const x = e.clientX, id = e.pointerId;
+    hold = setTimeout(() => { scrub = {x, h: +timeEl.value}; skipClick = true; try { dkTime.setPointerCapture(id); } catch (er) { } dkTime.classList.add('scrub'); bub.style.display = 'block'; show(); closeTray(); try { navigator.vibrate && navigator.vibrate(10); } catch (er) { } }, 380); });
+  dkTime.addEventListener('pointermove', e => { if (!scrub) return; let h = scrub.h + (e.clientX - scrub.x) * 24 / Math.max(240, innerWidth * .7); h = ((h % 24) + 24) % 24; timeEl.value = h; timeEl.oninput(); show(); });
+  const end = () => { clearTimeout(hold); if (!scrub) return; scrub = null; dkTime.classList.remove('scrub'); bub.style.display = 'none'; };
+  dkTime.addEventListener('pointerup', end); dkTime.addEventListener('pointercancel', end); dkTime.addEventListener('lostpointercapture', end);
+  dkTime.addEventListener('click', e => { if (skipClick) { skipClick = false; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+  dkTime.addEventListener('contextmenu', e => e.preventDefault());
+}
 dkBuild.onclick = () => toggleTray('build'); dkLand.onclick = () => toggleTray('land'); dkTime.onclick = () => toggleTray('time'); dkMore.onclick = () => toggleTray('more');
 // tapping the town closes an open tray (the tap still goes through)
 canvas.addEventListener('pointerdown', () => { if (UI.tray) closeTray(); }, true);

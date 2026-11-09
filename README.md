@@ -13,6 +13,7 @@ A painterly city builder in the browser: build a crooked, Porto-style riverside 
 ## Controls
 - **Touch:** tap to select, drag to orbit, pinch to zoom, press and hold a plot for the build wheel
 - **Shops:** tap any house to open, change or close its shop from the card
+- **Time shortcut:** press and hold the clock button, then slide left or right to scrub the time of day
 - **Keyboard:** 1–5 build tools, R/F raise/lower, X erase, L look, Space pause, M map, T time, Esc back, Ctrl/Cmd+Z undo
 
 ## Tech
