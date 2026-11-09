@@ -36,3 +36,10 @@ Deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main
 - Shop location bonuses and penalties, terrace and second-counter upgrades
 - Districts (Old Town, Riverside, Market) painted from Land › District; Districts map mode
 - Seasons every 5 days, regatta event, evening plaza crowds, rooftop cats; press H to frame the town
+
+## Characters and street life
+- People are one GPU-skinned mesh (bones in a float texture, 3 distance LODs), with smooth joints, body variety, clothing patterns, and faces that blink, smile and talk up close
+- Walks without foot sliding, per-role gaits, springy hair/skirts/bags, head turns, sit/stand blends, sipping coffee, reading the paper, carrying bread, waves, hugs, handshakes, laughter, sweeping, kids kicking a ball
+- Dogs (5 breeds, on leashes), cats (sit, groom, sleep), pigeons on plazas, gulls and ducks on the river, a donkey cart by day and a horse on market day
+- Shops: modelled window displays per type, scalloped fluttering awnings, swinging signs, open/closed door plates, café chairs stacked at closing, coffee steam
+- Add `?perf` to the URL (or press Shift+P) for a performance readout
