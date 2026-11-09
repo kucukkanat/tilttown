@@ -19,13 +19,16 @@ A painterly city builder in the browser: build a crooked, Porto-style riverside 
 - **Keyboard:** 1–5 build tools, R/F raise/lower, X erase, L look, Space pause, M map, T time, Esc back, Ctrl/Cmd+Z undo
 
 ## Tech
-A single `index.html` using [three.js](https://threejs.org/) r170 from jsDelivr. No build step; open the file or serve the folder.
+[three.js](https://threejs.org/) r170, plain ES modules in `src/`, bundled with [Vite](https://vite.dev/). See `CLAUDE.md` for the module map.
 
 ```sh
-python3 -m http.server 8000   # then open http://localhost:8000
+npm install
+npm run dev      # dev server with hot reload
+npm run build    # production build into dist/
+npm run smoke    # build, load the game in headless Chromium, fail on any error
 ```
 
-Deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main`.
+Deployed to GitHub Pages by `.github/workflows/pages.yml` (builds `dist/`) on every push to `main`.
 
 ## Progression and life (Nov 2026)
 - Guided first street: 6 steps with a glowing marker and €100 rewards, then daily goals take over
