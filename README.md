@@ -51,3 +51,7 @@ Deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main
 - Free time is driven by needs (food, coffee, fun, errands) that run down over the day; people pick the most attractive open shop within walking distance, so a newly opened café or bakery gets customers
 - Need bubbles mean "nothing suitable within walking distance"; 🚧 means a street is cut off from the town
 - New towns are generated fully connected
+
+## Storefronts and B&Bs
+- Every shop type has its own procedural storefront (seeded per shop): café terraces with parasols and chalkboards, bakery bay windows, open grocer fronts with produce steps, tiled fishmongers, arched florists, gold-lettered bookshops, barbers with a spinning pole, pharmacies with a lit green cross, stone-arched tascas, wine bars with barrel signs, cinema marquees with bulbs
+- B&B: a guesthouse front (painted door with fanlight, house number, blue AL licence plate, lantern, bay trees, bench, lace curtains, window boxes on every floor). Guests arrive with suitcases from 14:30, go out for dinner, stay 1–3 nights and check out by noon; rooms and appeal are shown in the shop card
