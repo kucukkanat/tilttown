@@ -47,6 +47,8 @@
   #snapB{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));display:none;padding:12px 20px;color:var(--paper);font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
   #card .gdone{opacity:.65}#card .gdone span{color:#f6c38a}#card .unl{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}#card .unl i{font-style:normal;font-size:11px;padding:3px 7px;border-radius:8px;background:rgba(243,230,204,.08);opacity:.55}#card .unl i.on{opacity:1;background:rgba(246,195,138,.2);color:#f6c38a}
   #card .album{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}#card figure{margin:0}#card figure img{width:100%;border-radius:6px;display:block}#card figcaption{font-size:11px;opacity:.8;margin-top:2px}#card .sec div{aspect-ratio:16/10;border-radius:6px;background:rgba(243,230,204,.08);display:grid;place-items:center;font:600 22px Fraunces,serif;opacity:.5}
+  #card .shopsec{border-top:1px solid rgba(243,230,204,.12);margin-top:8px;padding-top:6px}#card .shopsec h5{margin:4px 0 6px;font:italic 600 15px Fraunces,Georgia,serif}
+  #card .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin:6px 0}#card .stype{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:48px;text-align:left;background:rgba(243,230,204,.08)}#card .stype i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-bottom:2px}#card .stype small{opacity:.7;font-weight:500}#card .stype.poor small{color:#ffb4a0;opacity:1}#card .act.danger{color:#ffb4a0}
   #card .scn{border-top:1px solid rgba(243,230,204,.1);padding:6px 0}#card .scn p{margin:2px 0}#card .st{color:#f6c38a}#card input{background:rgba(0,0,0,.3);color:var(--paper);border:1px solid rgba(243,230,204,.2);border-radius:8px;padding:6px;font-size:12px;margin:3px 0}
   #presets button.locked{opacity:.4}
   #tut{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 32px));padding:18px;display:none;font-size:14px;line-height:1.45;z-index:5}
@@ -1592,7 +1594,7 @@ function houseCard(c, picker) {
   cardFor = {kind: 'house', c, picker};
   const b = c.bizObj, res = c.res || [];
   const shopInfo = b ? `<p><span>Shop</span>${b.name} · ${BIZ[b.type].label}</p><p><span>Hours</span>${BIZ[b.type].hours.map(([a, e]) => `${hhmm(a)}–${hhmm(e)}`).join(', ')} · ${isOpenAt(b.type, hour) ? 'Open' : 'Closed'}</p><p><span>Visits</span>${b.visits}</p><p><span>Money</span>${(newBizBooks(b), '')}today ${euro(b.rev)} · cash ${euro(b.cash)} · ${bizStatus(b)}</p><p><span>Costs/day</span>rent ${euro(RENT[b.type])}, wages ${euro(citizens.filter(z => z.work === b).reduce((a, z) => a + (WAGE[z.role] || 0), 0))}, tax 20%</p>${(() => { const staff = citizens.filter(z => z.work === b); const reg = b.who ? [...b.who.entries()].filter(([z]) => citizens.includes(z)).sort((a, d) => d[1] - a[1]).slice(0, 3).map(([z]) => z) : []; const favs = citizens.filter(z => z.fav === b && !reg.includes(z)).slice(0, 3 - reg.length); const regs = [...reg, ...favs]; return `${staff.length ? `<p><span>Staff</span>${staff.map(z => `<a data-z="${z.id}">${z.name.split(' ')[0]}</a>`).join(', ')}</p>` : ''}${regs.length ? `<p><span>Regulars</span>${regs.map(z => `<a data-z="${z.id}">${z.name.split(' ')[0]}</a>`).join(', ')}</p>` : ''}`; })()}` : '';
-  const pick_ = picker ? `<div class="grid">${Object.keys(BIZ).map(k => BIZ[k].locked && !has(BIZ[k].locked) ? `<button class="act" disabled style="opacity:.4">${BIZ[k].label} ★${UNLOCKS.find(u => u.id === BIZ[k].locked).at}</button>` : `<button class="act ${c.biz === k ? 'on' : ''}" data-b="${k}">${BIZ[k].label}</button>`).join('')}<button class="act" data-b="">${c.biz && performance.now() - (c.closeAsk || 0) < 4000 ? 'Tap again to close shop' : 'No shop'}</button></div><p class="tip">Opening a shop costs ${euro(COST.shop)}. It starts with €200 cash and closes if it falls below −€80.</p>` : '';
+  const pick_ = shopSection(c);
   cardEl.innerHTML = `<div class="ch"><div><b>${address(c)}</b><small>${c.floors} floor${c.floors > 1 ? 's' : ''} · ${res.length} resident${res.length === 1 ? '' : 's'}</small></div><button class="x">×</button></div>
     ${shopInfo}${pick_}${houseExtras(c)}
     ${res.length ? `<div class="res">${res.map(z => `<button class="act" data-z="${z.id}">${z.name.split(' ')[0]} · ${z.state === 'inside' && z.where.type === 'home' ? 'home' : 'out'}</button>`).join('')}</div>` : ''}`;
@@ -1600,15 +1602,45 @@ function houseCard(c, picker) {
   cardEl.querySelector('.x').onclick = closeCard;
   cardEl.querySelectorAll('[data-z]').forEach(bt => bt.onclick = () => personCard(citizens[+bt.dataset.z]));
   wireHouseExtras(c);
-  cardEl.querySelectorAll('[data-b]').forEach(bt => bt.onclick = () => {
-    const t = bt.dataset.b;
-    if (!t && c.biz && !(performance.now() - (c.closeAsk || 0) < 4000)) { c.closeAsk = performance.now(); bt.textContent = 'Tap again to close shop'; return; }
-    c.closeAsk = 0;
-    snapshot(); if (t && t !== c.biz && !spend(COST.shop, 'opening a shop')) { undoStack.pop(); return; } c.biz = t || null; if (t) c.bizName = pick(Math.random, BIZ[t].names);
-    if (t) dayStats.opened[t] = (dayStats.opened[t] || 0) + 1;
-    refresh(c, true); pop(c); dust(c); checkGoals();
-    if (t) { const b2 = c.bizObj; const res2 = citizens.filter(z => z.role === 'worker' || z.role === 'retiree'); if (b2 && res2.length) { const z = res2.sort((a, d) => (Math.abs(a.home.i - c.i) + Math.abs(a.home.j - c.j)) - (Math.abs(d.home.i - c.i) + Math.abs(d.home.j - c.j)))[0]; z.role = 'keeper'; z.work = b2; z.plan = makePlan(z); z.step = null; makeLook(z, z.R); buildPeopleMeshes(); } }
-    say(t ? `${BIZ[t].label} opening soon` : 'Shop closed for good'); houseCard(c, true);
+  wireShopSection(c);
+}
+const CHANGE_COST = () => Math.round(COST.shop * .5);
+function shopSection(c) {
+  if (!c.floors) return '';
+  if (frontFace(c) === undefined) return `<div class="shopsec"><h5>Shop</h5><p class="tip">Needs a door onto a street to host a shop.</p></div>`;
+  const grid = (price, skip) => `<div class="sgrid">${Object.keys(BIZ).filter(k => k !== skip).map(k => BIZ[k].locked && !has(BIZ[k].locked)
+    ? `<button class="act stype" disabled><i style="background:${SHOPCOL[k][0]}"></i>${BIZ[k].label}<small>★${UNLOCKS.find(u => u.id === BIZ[k].locked).at}</small></button>`
+    : `<button class="act stype${price > funds ? ' poor' : ''}" data-b="${k}"><i style="background:${SHOPCOL[k][0]}"></i>${BIZ[k].label}<small>${euro(price)}</small></button>`).join('')}</div>`;
+  if (!c.biz) return `<div class="shopsec"><h5>Open a shop</h5>${grid(COST.shop)}<p class="tip">A new shop starts with ${euro(200)} cash and closes if it falls below −${euro(80)}.</p></div>`;
+  const closing = performance.now() - (c.closeAsk || 0) < 4000;
+  return `<div class="shopsec"><h5>Shop</h5><div class="grid"><button class="act" data-sa="change">${c.chgOpen ? 'Cancel' : 'Change type'}</button><button class="act danger" data-sa="close">${closing ? `Tap again · refund ${euro(Math.round(COST.shop * .3))}` : 'Close shop'}</button></div>${c.chgOpen ? `${grid(CHANGE_COST(), c.biz)}<p class="tip">Refitting costs half a new shop. The name, cash and staff stay.</p>` : ''}</div>`;
+}
+function hireKeeper(c) {
+  const b2 = c.bizObj, pool = citizens.filter(z => z.role === 'worker' || z.role === 'retiree'); if (!b2 || !pool.length) return;
+  const z = pool.sort((a, d) => (Math.abs(a.home.i - c.i) + Math.abs(a.home.j - c.j)) - (Math.abs(d.home.i - c.i) + Math.abs(d.home.j - c.j)))[0];
+  z.role = 'keeper'; z.work = b2; z.plan = makePlan(z); z.step = null; makeLook(z, z.R); buildPeopleMeshes();
+}
+function wireShopSection(c) {
+  cardEl.querySelectorAll('[data-sa]').forEach(bt => bt.onclick = () => {
+    if (bt.dataset.sa === 'change') { c.chgOpen = !c.chgOpen; c.closeAsk = 0; houseCard(c); return; }
+    if (!(performance.now() - (c.closeAsk || 0) < 4000)) { c.closeAsk = performance.now(); c.chgOpen = false; houseCard(c); return; }
+    c.closeAsk = 0; snapshot(); const old = c.bizObj;
+    citizens.forEach(z => { if (z.work === old) { z.work = null; z.role = 'worker'; z.plan = makePlan(z); z.step = null; } });
+    c.biz = null; refund(COST.shop); refresh(c, true); dust(c); checkGoals(); say('Shop closed · the ground floor is a home again'); houseCard(c);
+  });
+  cardEl.querySelectorAll('.shopsec [data-b]').forEach(bt => bt.onclick = () => {
+    const t = bt.dataset.b; if (!t) return;
+    if (!c.biz) {
+      snapshot(); if (!spend(COST.shop, 'opening a shop')) { undoStack.pop(); return; }
+      c.biz = t; c.bizName = pick(Math.random, BIZ[t].names); dayStats.opened[t] = (dayStats.opened[t] || 0) + 1;
+      refresh(c, true); pop(c); dust(c); checkGoals(); hireKeeper(c); say(`${BIZ[t].label} opening soon`); houseCard(c); return;
+    }
+    if (t === c.biz) return;
+    snapshot(); if (!spend(CHANGE_COST(), 'refitting the shop')) { undoStack.pop(); return; }
+    const old = c.bizObj, keep = old && {cash: old.cash, visits: old.visits, hist: old.hist, who: old.who};
+    c.biz = t; c.chgOpen = false; refresh(c, true); pop(c); dust(c);
+    const nb = c.bizObj; if (nb && keep) { Object.assign(nb, keep); citizens.forEach(z => { if (z.work === old) { z.work = nb; z.plan = makePlan(z); z.step = null; } }); }
+    dayStats.opened[t] = (dayStats.opened[t] || 0) + 1; checkGoals(); say(`Now a ${BIZ[t].label.toLowerCase()}: ${c.bizName}`); houseCard(c);
   });
 }
 function refreshCard() { if (!cardFor) return; if (cardFor.kind === 'person') { const n = cardEl.querySelector('.now'); if (n) n.textContent = describe(cardFor.z); } }
@@ -2229,7 +2261,7 @@ document.getElementById('menu').onclick = () => {
 const TUT = [
   ['Welcome to Tilt Town', 'Build a crooked riverside neighbourhood and watch its people live in it. Drag to orbit, pinch or scroll to zoom.'],
   ['Look around', 'With the Look tool, tap any person to see who they are, what they are doing and their plan for today. Tap a house to meet its residents. Follow someone with the Follow button.'],
-  ['Build with money', 'Tap Build at the bottom, pick House, Shop, Tree and more, then tap plots. Tap Done when finished. Each piece costs money from the treasury (top left); taxes come in at midnight. Shortcut: press and hold a plot for a quick build wheel.'],
+  ['Build with money', 'Tap Build at the bottom, pick House, Tree, Lamp and more, then tap plots. Tap Done when finished. To open a café or shop, tap any house and pick one in its card. Each piece costs money from the treasury (top left); taxes come in at midnight. Shortcut: press and hold a plot for a quick build wheel.'],
   ['Keep people happy', 'Mood rises with food shops nearby, plazas and money. Happy towns attract newcomers and unlock landmarks: a church, a tram and a funicular. Check Requests for residents\' wishes.'],
   ['Time and more', 'The clock button opens time controls: pause, speed and jump to dawn, noon, dusk or night. More has the map, pins, looks, photo mode and settings. News at the top collects goals, requests and the town paper.'],
 ];
@@ -3448,7 +3480,7 @@ function apply(c) {
   if (!['look', 'shop', 'landmark'].includes(tool)) snapshot();
   if (tool === 'landmark') return landmarkCard(c);
   if (tool === 'look') { if (c.floors > 0) houseCard(c, false); else if (c.broken) { selectCell(c); cardFor = {kind: 'lamp'}; cardEl.innerHTML = `<div class="ch"><div><b>Broken street lamp</b><small>Knocked out by the storm</small></div><button class="x">×</button></div><button class="act wide" id="fixL">Repair for €20</button>`; cardEl.style.display = 'block'; cardEl.querySelector('.x').onclick = closeCard; document.getElementById('fixL').onclick = () => { if (!spend(20, 'a repair')) return; c.broken = false; rebuildObj(c); rebuildGlows(); closeCard(); }; } else closeCard(); return; }
-  if (tool === 'shop') { if (!c.floors) { say('Tap a house'); return; } if (frontFace(c) === undefined) { say('Needs a door onto a street'); return; } houseCard(c, true); return; }
+  if (tool === 'shop') { if (!c.floors) { say('Tap a house'); return; } houseCard(c); return; }
   if (tool === 'plaza') { if (c.water || c.floors > 0) { say('Needs an empty street'); return; } if (c.kind !== 'plaza' && !spend(COST.plaza, 'a plaza')) return; if (c.kind === 'plaza') refund(COST.plaza); c.kind = c.kind === 'plaza' ? null : 'plaza'; refresh(c); if (c.kind) { pop(c); dust(c); } return; }
   if (tool === 'house') {
     if (c.water) { if (c.kind !== 'bridge' && !spend(COST.bridge, 'a bridge')) return; if (c.kind === 'bridge') refund(COST.bridge); c.kind = c.kind === 'bridge' ? null : 'bridge'; refresh(c); if (c.kind) { pop(c); dust(c); } return; }
@@ -3568,7 +3600,7 @@ if (!loaded) generate(1234);
    UI v2: thumb-zone dock, contextual trays, bottom sheet, radial build menu
    ========================================================================== */
 const UI = {tray: null, armed: null};
-const BUILD_ITEMS = ['house', 'shop', 'plaza', 'landmark', 'tree', 'lamp'], LAND_ITEMS = ['raise', 'lower', 'erase'];
+const BUILD_ITEMS = ['house', 'plaza', 'landmark', 'tree', 'lamp'], LAND_ITEMS = ['raise', 'lower', 'erase'];
 const TLABEL = Object.fromEntries(TOOLS);
 const costOf = id => ({house: COST.house, shop: COST.shop, plaza: COST.plaza, tree: COST.tree, lamp: COST.lamp, raise: COST.raise, lower: COST.lower})[id];
 const svgI = id => `<svg viewBox="0 0 24 24">${ICON[id]}</svg>`;
@@ -3757,7 +3789,7 @@ const _snap = snapshot; snapshot = function () { _snap.apply(this, arguments); u
 
 /* ---- radial build menu on long-press ---- */
 const radial = document.createElement('div'); radial.id = 'radial'; radial.innerHTML = '<div class="ring"></div>'; document.body.appendChild(radial);
-const RAD = ['house', 'shop', 'tree', 'lamp', 'plaza', 'erase'];
+const RAD = ['house', 'tree', 'lamp', 'plaza', 'erase'];
 RAD.forEach((id, k) => { const a = -Math.PI / 2 + k / RAD.length * Math.PI * 2, b = document.createElement('button'); b.dataset.t = id; b.style.left = (110 + Math.cos(a) * 78) + 'px'; b.style.top = (110 + Math.sin(a) * 78) + 'px'; radial.appendChild(b); });
 let rad = null, lpT = null;
 function radialOpen(x, y, c) {
@@ -3798,7 +3830,7 @@ addEventListener('keydown', e => {
   const k = e.key.toLowerCase();
   if ((e.metaKey || e.ctrlKey) && k === 'z') { e.preventDefault(); undo(); return; }
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  const map = {'1': 'house', '2': 'shop', '3': 'plaza', '4': 'landmark', '5': 'tree', '6': 'lamp', r: 'raise', f: 'lower', x: 'erase', l: 'look'};
+  const map = {'1': 'house', '2': 'plaza', '3': 'landmark', '4': 'tree', '5': 'lamp', r: 'raise', f: 'lower', x: 'erase', l: 'look'};
   if (map[k]) { armTool(map[k]); return; }
   if (k === 'escape') { if (rad) radialClose(); else if (UI.tray) closeTray(); else if (tool !== 'look') armTool('look'); else closeCard(); }
   else if (k === ' ') { e.preventDefault(); const b = document.querySelector(`.spd .act[data-s="${speed ? 0 : 1}"]`); b && b.click(); }
@@ -3815,7 +3847,7 @@ function updateUI(dt) {
     if (UI.tray === 'build' || UI.tray === 'land') refreshItems(); refreshInbox();
     if (!UI.tray && ctx.classList.contains('show') !== (tool !== 'look')) { syncCtx(); syncDock(); }
   }
-  undoT = Math.max(0, undoT - dt); undoF.classList.toggle('show', undoT > 0 && undoStack.length > 0);
+  undoT = Math.max(0, undoT - dt); undoF.classList.toggle('show', undoT > 0 && undoStack.length > 0 && (innerWidth > 700 || cardEl.style.display === 'none'));
 }
 setTimeout(() => document.getElementById('title')?.classList.add('gone'), 7000);
 addEventListener('pointerdown', () => setTimeout(() => document.getElementById('title')?.classList.add('gone'), 2500), {once: true});
