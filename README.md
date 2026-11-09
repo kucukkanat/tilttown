@@ -43,3 +43,11 @@ Deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main
 - Dogs (5 breeds, on leashes), cats (sit, groom, sleep), pigeons on plazas, gulls and ducks on the river, a donkey cart by day and a horse on market day
 - Shops: modelled window displays per type, scalloped fluttering awnings, swinging signs, open/closed door plates, café chairs stacked at closing, coffee steam
 - Add `?perf` to the URL (or press Shift+P) for a performance readout
+
+## Life simulation
+- People walk on a fine navigation grid (8 cells per tile): around lamp posts, fountains, benches, café furniture and props, up real stairs, across bridge decks only, and never through walls or over water
+- They steer around each other and around people standing still
+- No more teleports: people appear and vanish only at doors or the town edge, with a short fade
+- Free time is driven by needs (food, coffee, fun, errands) that run down over the day; people pick the most attractive open shop within walking distance, so a newly opened café or bakery gets customers
+- Need bubbles mean "nothing suitable within walking distance"; 🚧 means a street is cut off from the town
+- New towns are generated fully connected

@@ -942,7 +942,8 @@ function updateWalkers(dt, t) {
 
 /* ---------- street props ---------- */
 const CAFE = ['#b8432f', '#2f5f6f', '#3f6a3f', '#c9a33f'];
-function propAt(out, R, pm, kind) {
+function propAt(out, R, pm, kind) { const n0 = out.length; propAt0(out, R, pm, kind); if (kind !== 'puddle' && kind !== 'manhole' && typeof nav !== 'undefined') navPropBox(out.slice(n0)); }
+function propAt0(out, R, pm, kind) {
   const P = (g) => out.push(g);
   if (kind === 'bench') {
     P(box(.62, .05, .2, '#6a4a30', mul(pm, tr(0, .22, 0)))); P(box(.62, .16, .04, '#6a4a30', mul(pm, tr(0, .36, -.09))));
@@ -979,6 +980,7 @@ function pickProp(R) { let r = R() * 21; for (const [k, w] of PROPS) if ((r -= w
 const boatsG = new THREE.Group(); scene.add(boatsG);
 function buildStreets(stone, out) {
   boatsG.children.forEach(o => o.geometry.dispose()); boatsG.clear();
+  nav.props.length = 0; nav.dirty = true;
   rebuildBiz(); bizSpillG.children.forEach(o => o.traverse(m => m.geometry && m.geometry.dispose())); bizSpillG.clear(); publicSeats = []; railSpots = [];
   for (const b of businesses) { bizSpill(b); b.grille = b.cell.grille; }
   if (typeof mapOn !== 'undefined' && mapOn) setTimeout(buildMapUI, 0);
@@ -1288,6 +1290,7 @@ function bizSpill(b) {
   if (g.length) grp.add(mkMesh(g, plainMat, true));
   b.furnOpen = b.furnClosed = null; if (gOpen.length) { b.furnOpen = mkMesh(gOpen, plainMat, true); b.furnClosed = mkMesh(gClosed, plainMat, true); grp.add(b.furnOpen, b.furnClosed); }
   if (lit.length) grp.add(mkMesh(lit, litMat, false));
+  for (const geo of g) navPropBox([geo], .03, .12, y + .3);
   grp.userData.biz = b; b.spill = grp; bizSpillG.add(grp); hookMap(grp, b.cell);
 }
 
@@ -1320,6 +1323,228 @@ function bfs(a, b, maxD = 999) {
   return null;
 }
 function houseDoor(h) { const k = frontFace(h); if (k === undefined) return null; const [dx, dz] = DIRS[k], L = cellAt(h.i + dx, h.j + dz); return new THREE.Vector3(wx(L.i) - dx * .9, L.lvl * LV, wx(L.j) - dz * .9); }
+
+
+/* ==========================================================================
+   NAV: fine walk grid (8 nodes per cell). Hard blocks (walls, water, cliffs,
+   stair railings via height steps) and soft blocks (props, furniture, lamp
+   posts, fountains) that paths avoid; A* + string pulling; ground height that
+   follows stairs and bridge decks.
+   ========================================================================== */
+const NR = 8, NG = N * NR, NS = S / NR, NX0 = -N * S / 2;
+const nav = {pass: new Uint8Array(NG * NG), h: new Float32Array(NG * NG), comp: new Int32Array(NG * NG), dirty: true, props: [], fields: new Map(), stairs: new Map()};
+const nIdx = (gx, gz) => gx * NG + gz;
+const nOf = v => Math.floor((v - NX0) / NS);
+const nX = g => NX0 + (g + .5) * NS;
+function stairsOf(c) {
+  let s = nav.stairs.get(c); if (s) return s; s = [];
+  if (c && walkable(c) && !c.water) DIRS.forEach(([dx, dz], di) => { const U = cellAt(c.i + dx, c.j + dz); if (!U || U.water || !walkable(U) || U.lvl !== c.lvl + 1) return; const R = rng(c.seed * 3 + di); s.push({dx, dz, lat: (R() - .5) * .7}); });
+  nav.stairs.set(c, s); return s;
+}
+function groundAt(x, z, c = cellOf({x, z})) {
+  if (!c) return 0; if (c.water) return .17;
+  const lx = x - wx(c.i), lz = z - wx(c.j), base = c.lvl * LV;
+  for (const st of stairsOf(c)) { const along = lx * st.dx + lz * st.dz, lat = -lx * st.dz + lz * st.dx; if (along > 0 && Math.abs(lat - st.lat) < .45) return base + LV * THREE.MathUtils.clamp(along + .1, 0, 1); }
+  return base;
+}
+function navPropBox(geos, inflate = .05, minH = .08, maxY0 = Infinity) {
+  if (!geos.length) return; const bb = new THREE.Box3(), b = new THREE.Box3();
+  for (const g of geos) { if (!g.boundingBox) g.computeBoundingBox(); b.copy(g.boundingBox); if (b.max.y - b.min.y < minH) continue; bb.union(b); }
+  if (!bb.isEmpty() && bb.min.y <= maxY0) nav.props.push({x0: bb.min.x - inflate, x1: bb.max.x + inflate, z0: bb.min.z - inflate, z1: bb.max.z + inflate, y0: bb.min.y});
+}
+function navBuild() {
+  nav.dirty = false; nav.stairs.clear(); nav.fields.clear();
+  const P = nav.pass, H = nav.h;
+  for (let gx = 0; gx < NG; gx++) for (let gz = 0; gz < NG; gz++) {
+    const k = nIdx(gx, gz), c = cellAt(Math.floor(gx / NR), Math.floor(gz / NR)), x = nX(gx), z = nX(gz);
+    if (!c || !walkable(c)) { P[k] = 0; H[k] = 0; continue; }
+    if (c.water) { const ok = c.kind === 'bridge' && Math.abs(x - wx(c.i)) < .42; P[k] = ok ? 1 : 0; H[k] = .17; continue; }
+    P[k] = 1; H[k] = groundAt(x, z, c);
+    const lx = x - wx(c.i), lz = z - wx(c.j);
+    // quay rails / parapets at the cell rim towards water or drops
+    if (Math.abs(lx) > .86 || Math.abs(lz) > .86) { const dx = Math.abs(lx) > .86 ? Math.sign(lx) : 0, dz = Math.abs(lz) > .86 ? Math.sign(lz) : 0; for (const [ax, az] of [[dx, 0], [0, dz]]) { if (!ax && !az) continue; const n = cellAt(c.i + ax, c.j + az); if (!n || (n.water && n.kind !== 'bridge') || (n.water && n.kind === 'bridge' && ax !== 0)) P[k] = 0; } }
+  }
+  // soft obstacles: lamp posts, plaza furniture, street props, shop furniture
+  const soft = (x, z, r) => { for (let gx = nOf(x - r); gx <= nOf(x + r); gx++) for (let gz = nOf(z - r); gz <= nOf(z + r); gz++) { if (gx < 0 || gz < 0 || gx >= NG || gz >= NG) continue; const k = nIdx(gx, gz); if (P[k] && Math.hypot(nX(gx) - x, nX(gz) - z) < r) P[k] = 2; } };
+  const softBox = (x0, x1, z0, z1) => { for (let gx = Math.max(0, nOf(x0)); gx <= Math.min(NG - 1, nOf(x1)); gx++) for (let gz = Math.max(0, nOf(z0)); gz <= Math.min(NG - 1, nOf(z1)); gz++) { const k = nIdx(gx, gz); if (P[k] && nX(gx) > x0 && nX(gx) < x1 && nX(gz) > z0 && nX(gz) < z1) P[k] = 2; } };
+  for (const c of cells) {
+    const x = wx(c.i), z = wx(c.j);
+    if (c.kind === 'lamp') soft(x + (c.broken ? .15 : 0), z, .16);
+    if (c.kind === 'plaza') { soft(x, z, c.statue ? .48 : .72); for (const sz of [.82, -.82]) softBox(x - .36, x + .36, z + sz - .16, z + sz + .16); for (const [a, b] of [[.75, .75], [-.75, -.75], [.78, -.78], [-.78, .78]]) soft(x + a, z + b, .2); }
+  }
+  for (const b of nav.props) softBox(b.x0, b.x1, b.z0, b.z1);
+  // connected components (soft counts as passable) for reachability tests
+  const C = nav.comp; C.fill(-1); let id = 0; const q = new Int32Array(NG * NG);
+  for (let s = 0; s < NG * NG; s++) { if (!P[s] || C[s] >= 0) continue; let h = 0, t = 0; q[t++] = s; C[s] = id;
+    while (h < t) { const k = q[h++], gx = (k / NG) | 0, gz = k % NG; for (const [ax, az] of NB4) { const nx = gx + ax, nz = gz + az; if (nx < 0 || nz < 0 || nx >= NG || nz >= NG) continue; const n = nIdx(nx, nz); if (C[n] >= 0 || !P[n] || !navStep(k, n)) continue; C[n] = id; q[t++] = n; } }
+    id++; }
+}
+const NB4 = [[1, 0], [-1, 0], [0, 1], [0, -1]], NB8 = [[1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1], [1, 1, 1.414], [1, -1, 1.414], [-1, 1, 1.414], [-1, -1, 1.414]];
+function navStep(a, b) {
+  const P = nav.pass; if (!P[a] || !P[b]) return false;
+  if (Math.abs(nav.h[a] - nav.h[b]) > .25) return false;
+  const ax = (a / NG) | 0, az = a % NG, bx = (b / NG) | 0, bz = b % NG, ci = Math.floor(ax / NR), cj = Math.floor(az / NR), di = Math.floor(bx / NR), dj = Math.floor(bz / NR);
+  if (ci === di && cj === dj) return true;
+  if (ci !== di && cj !== dj) return false;
+  const A = cellAt(ci, cj), B = cellAt(di, dj); return !!(A && B && canStep(A, B, di - ci) && canStep(B, A, ci - di));
+}
+function navEnsure() { if (nav.dirty) navBuild(); }
+function navNear(x, z, maxR = 10) { // nearest passable node to a point
+  navEnsure(); const gx = THREE.MathUtils.clamp(nOf(x), 0, NG - 1), gz = THREE.MathUtils.clamp(nOf(z), 0, NG - 1);
+  if (nav.pass[nIdx(gx, gz)] === 1) return nIdx(gx, gz);
+  for (let r = 1; r <= maxR; r++) { let best = -1, bd = 1e9; for (let ax = -r; ax <= r; ax++) for (let az = -r; az <= r; az++) { if (Math.max(Math.abs(ax), Math.abs(az)) !== r) continue; const nx = gx + ax, nz = gz + az; if (nx < 0 || nz < 0 || nx >= NG || nz >= NG) continue; const k = nIdx(nx, nz); if (nav.pass[k] !== 1) continue; const d = ax * ax + az * az; if (d < bd) { bd = d; best = k; } } if (best >= 0) return best; }
+  return -1;
+}
+const nodeVec = (k, v = new THREE.Vector3()) => v.set(nX((k / NG) | 0), nav.h[k], nX(k % NG));
+// A* over the fine grid
+const AS = {g: new Float32Array(NG * NG), f: new Float32Array(NG * NG), from: new Int32Array(NG * NG), seen: new Uint32Array(NG * NG), stamp: 1, heap: new Int32Array(NG * NG * 4)};
+function navPath(sx, sz, tx, tz) {
+  navEnsure();
+  let s = navNear(sx, sz, 6); if (s < 0) return null;
+  const tgx = THREE.MathUtils.clamp(nOf(tx), 0, NG - 1), tgz = THREE.MathUtils.clamp(nOf(tz), 0, NG - 1);
+  let t = nIdx(tgx, tgz); if (!nav.pass[t] || nav.comp[t] !== nav.comp[s]) { t = -1; // goal inside a wall: nearest reachable node
+    for (let r = 1; r <= 10 && t < 0; r++) for (let ax = -r; ax <= r && t < 0; ax++) for (let az = -r; az <= r; az++) { const nx = tgx + ax, nz = tgz + az; if (nx < 0 || nz < 0 || nx >= NG || nz >= NG) continue; const k = nIdx(nx, nz); if (nav.pass[k] && nav.comp[k] === nav.comp[s]) { t = k; break; } } }
+  if (t < 0) return null;
+  const st = ++AS.stamp, {g, f, from, seen, heap} = AS; let hn = 0;
+  const hx = (t / NG) | 0, hz = t % NG, heur = k => { const dx = Math.abs(((k / NG) | 0) - hx), dz = Math.abs(k % NG - hz); return Math.max(dx, dz) + .414 * Math.min(dx, dz); };
+  const push = k => { let i = hn++; heap[i] = k; while (i > 0) { const p = (i - 1) >> 1; if (f[heap[p]] <= f[k]) break; heap[i] = heap[p]; i = p; } heap[i] = k; };
+  const pop = () => { const top = heap[0], last = heap[--hn]; let i = 0; while (true) { let l = i * 2 + 1; if (l >= hn) break; if (l + 1 < hn && f[heap[l + 1]] < f[heap[l]]) l++; if (f[heap[l]] >= f[last]) break; heap[i] = heap[l]; i = l; } heap[i] = last; return top; };
+  seen[s] = st; g[s] = 0; f[s] = heur(s); from[s] = -1; push(s); let found = false, it = 0;
+  while (hn && it++ < 40000) {
+    const k = pop(); if (k === t) { found = true; break; }
+    const kx = (k / NG) | 0, kz = k % NG;
+    for (const [ax, az, w] of NB8) {
+      const nx = kx + ax, nz = kz + az; if (nx < 0 || nz < 0 || nx >= NG || nz >= NG) continue; const n = nIdx(nx, nz);
+      if (!navStep(k, n)) continue;
+      if (ax && az && (!navStep(k, nIdx(nx, kz)) || !navStep(k, nIdx(kx, nz)))) continue;
+      const cost = g[k] + w * (nav.pass[n] === 2 ? 6 : 1);
+      if (seen[n] === st && cost >= g[n]) continue;
+      seen[n] = st; g[n] = cost; f[n] = cost + heur(n); from[n] = k; push(n);
+    }
+  }
+  if (!found) return null;
+  const nodes = []; for (let k = t; k >= 0; k = from[k]) nodes.push(k); nodes.reverse();
+  // string pulling: keep the farthest node still in clear line of sight
+  const out = []; let i = 0;
+  while (i < nodes.length - 1) { let j = Math.min(nodes.length - 1, i + 24); while (j > i + 1 && !navLOS(nodes[i], nodes[j])) j--; out.push(nodes[j]); i = j; }
+  return out.map(k => nodeVec(k));
+}
+function navLOS(a, b) {
+  const ax = nX((a / NG) | 0), az = nX(a % NG), bx = nX((b / NG) | 0), bz = nX(b % NG), L = Math.hypot(bx - ax, bz - az), n = Math.ceil(L / .08); let prev = a;
+  for (let q = 1; q <= n; q++) { const u = q / n, k = nIdx(nOf(ax + (bx - ax) * u), nOf(az + (bz - az) * u)); if (k === prev) continue; if (nav.pass[k] !== 1 && k !== b) return false; const px = (prev / NG) | 0, pz = prev % NG, kx = (k / NG) | 0, kz = k % NG; if (!navStep(prev, k)) return false; if (px !== kx && pz !== kz && (!navStep(prev, nIdx(kx, pz)) || !navStep(prev, nIdx(px, kz)))) return false; prev = k; }
+  return true;
+}
+// BFS distance fields from each business door (in cells) for decisions
+function navDist(b, from) {
+  navEnsure(); let F = nav.fields.get(b);
+  if (!F) { F = new Float32Array(NG * NG).fill(1e9); const s = navNear(b.door.x, b.door.z, 6); if (s >= 0) { const q = new Int32Array(NG * NG); let h = 0, t = 0; q[t++] = s; F[s] = 0; while (h < t) { const k = q[h++], gx = (k / NG) | 0, gz = k % NG; for (const [ax, az] of NB4) { const nx = gx + ax, nz = gz + az; if (nx < 0 || nz < 0 || nx >= NG || nz >= NG) continue; const n = nIdx(nx, nz); if (F[n] < 1e9 || !navStep(k, n)) continue; F[n] = F[k] + 1; q[t++] = n; } } } nav.fields.set(b, F); }
+  const k = navNear(from.x, from.z, 6); return k < 0 ? 1e9 : F[k] / NR;
+}
+const navOK = (x, z) => { const gx = nOf(x), gz = nOf(z); return gx >= 0 && gz >= 0 && gx < NG && gz < NG && nav.pass[nIdx(gx, gz)] > 0; };
+function navRandomSpot(z, filter) { // a random free spot reachable from z
+  navEnsure(); const s = navNear(z.pos.x, z.pos.z, 6); if (s < 0) return null;
+  for (let tries = 0; tries < 40; tries++) { const k = Math.floor(z.R() * NG * NG); if (nav.pass[k] !== 1 || nav.comp[k] !== nav.comp[s]) continue; const c = cellAt(Math.floor(((k / NG) | 0) / NR), Math.floor((k % NG) / NR)); if (!c || c.water || (filter && !filter(c))) continue; return nodeVec(k); }
+  return null;
+}
+/* ---------------- needs-driven errands ---------------- */
+const SAT = {bakery: {food: .5, coffee: .15}, grocer: {food: .8}, fish: {food: .6}, cafe: {coffee: 1, fun: .2}, tasca: {food: .4, fun: .5}, winebar: {fun: .7}, cinema: {fun: .9}, florist: {errand: 1}, pharmacy: {errand: 1}, barber: {errand: 1}, books: {errand: 1, fun: .2}};
+const NEED_RATE = {food: .045, coffee: .09, fun: .04, errand: .03};
+function needs(z) {
+  if (!z.nd) { const R = rng((z.seedN || 1) * 17 + 3); z.nd = {food: .45 + R() * .5, coffee: .35 + R() * .6, fun: .4 + R() * .5, errand: .5 + R() * .5}; z.ndT = now(); }
+  return z.nd;
+}
+function needsTick(z) {
+  const n = needs(z), t = now(), dh = Math.max(0, Math.min(6, t - z.ndT)); z.ndT = t; if (!dh) return;
+  const awake = hour > 6.5 && hour < 23, home = z.state === 'inside' && z.where?.type === 'home';
+  for (const k in NEED_RATE) n[k] = Math.max(0, n[k] - NEED_RATE[k] * dh * (awake ? 1 : .2) * (k === 'coffee' && home ? .5 : 1));
+}
+function satisfy(z, type) { const n = needs(z), s = SAT[type]; if (!s) return; for (const k in s) n[k] = Math.min(1, n[k] + s[k]); }
+const MAXWALK = z => z.role === 'retiree' ? 9 : z.role === 'student' ? 13 : 11;
+function fromPos(z) { return z.state === 'inside' ? (z.where?.type === 'home' ? (houseDoor(z.home) || z.pos) : z.where?.b?.door || z.pos) : z.pos; }
+function shopOptions(z, bias, typeOnly) {
+  const n = needs(z), from = fromPos(z), out = [];
+  for (const b of businesses) {
+    if (!b.door || !isOpenAt(b.type, hour) || (typeOnly && b.type !== typeOnly)) continue;
+    const s = SAT[b.type] || {}; let gain = 0; for (const k in s) gain += (1 - n[k]) * s[k];
+    if (bias === b.type) gain += .45; if (gain < .18 && !typeOnly) continue;
+    const d = navDist(b, from); if (d > MAXWALK(z)) continue;
+    if ((z.wallet ?? 0) < (PRICE[b.type] || 8) * .85) continue;
+    const busy = b.queue ? b.queue.length : 0; if (busy >= 5) continue;
+    out.push({b, score: gain / (1 + d / 6) * (z.fav === b ? 1.3 : 1) * (1 - busy * .1), d});
+  }
+  return out.sort((a, c) => c.score - a.score);
+}
+function chooseActivity(z, bias) {
+  const opts = shopOptions(z, bias), r = z.R();
+  const strollW = .16 + (needs(z).fun < .5 ? .1 : 0), best = opts[0];
+  if (best && best.score > strollW * (.6 + r * .8)) { const pickO = opts.length > 1 && z.R() < .25 ? opts[1] : best; return goBusiness(z, pickO.b); }
+  return newStroll(z);
+}
+function goBusiness(z, b) { return ['cafe', 'tasca', 'winebar', 'cinema'].includes(b.type) ? visitB(z, b) : shopB(z, b); }
+function visitB(z, b) {
+  if (!pay(z, b)) return newStroll(z);
+  release(z); if (z.state === 'inside' && !show(z)) return;
+  const dur = b.type === 'tasca' ? 1 + z.R() : .4 + z.R() * .5;
+  if (raining() || b.type === 'cinema') return goTo(z, b.door, 'enter', {type: 'cafeIn', b, until: now() + dur});
+  const s = freeSeat(b.seats, z); if (!s) return goTo(z, b.door, 'enter', {type: 'cafeIn', b, until: now() + dur});
+  s.biz = b; goTo(z, s.pos, 'seat', {seat: s, dur});
+}
+function shopB(z, b) {
+  release(z); if (z.state === 'inside' && !show(z)) return;
+  b.queue.push(z); z.qb = b; goTo(z, qspot(b, b.queue.length - 1), 'queue');
+}
+/* local avoidance: walkers steer around each other and around people standing still */
+const _sep = new THREE.Vector3(), sepHash = new Map();
+function separate(dt) {
+  sepHash.clear(); const key = (x, z) => (Math.floor(x / .5) + 512) * 4096 + Math.floor(z / .5) + 512;
+  for (const z of citizens) { if (z.state === 'inside') continue; const k = key(z.pos.x, z.pos.z); let l = sepHash.get(k); if (!l) sepHash.set(k, l = []); l.push(z); }
+  const R = .22, LOOK = .55;
+  for (const z of citizens) {
+    if (z.state !== 'go' && z.state !== 'follow') continue;
+    const gd = z.goal ? Math.hypot(z.goal.pt.x - z.pos.x, z.goal.pt.z - z.pos.z) : 9;
+    _sep.set(0, 0, 0); const gx = Math.floor(z.pos.x / .5), gz = Math.floor(z.pos.z / .5), fx = Math.sin(z.yaw), fz = Math.cos(z.yaw);
+    for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { const l = sepHash.get((gx + a + 512) * 4096 + gz + b + 512); if (!l) continue;
+      for (const o of l) { if (o === z || (z.role === 'child' && o === z.parent) || (o.role === 'child' && o.parent === z) || (z.role === 'child' && o.role === 'child' && o.parent === z.parent)) continue;
+        const dx = z.pos.x - o.pos.x, dz = z.pos.z - o.pos.z, d = Math.hypot(dx, dz); if (d > LOOK || d < 1e-4 || Math.abs(z.pos.y - o.pos.y) > .3) continue;
+        if (gd < .25 && o.state !== 'go') continue; // arriving next to someone (queue, seat) is fine
+        const share = o.state === 'go' || o.state === 'follow' ? .5 : 1;
+        if (d < R) { const k = (R - d) / R * 2.2 * share; _sep.x += dx / d * k; _sep.z += dz / d * k; }
+        const along = -dx * fx - dz * fz; // other is ahead of me
+        if (along > 0 && along < LOOK) { const px = -dx - fx * along, pz = -dz - fz * along, lat = Math.hypot(px, pz); if (lat < R * 1.15) { let sx = fz, sz = -fx; const side = px * sx + pz * sz; if (side > 0 || (side === 0 && o.state === 'go')) { sx = -sx; sz = -sz; } const k = (1 - along / LOOK) * (1 - lat / (R * 1.15)) * 1.6 * share; _sep.x += sx * k; _sep.z += sz * k; } } } }
+    if (!_sep.x && !_sep.z) continue;
+    const m = Math.hypot(_sep.x, _sep.z), L = Math.min(1.2, m) * dt * .7 * Math.max(speed, .5), nx = z.pos.x + _sep.x / m * L, nz = z.pos.z + _sep.z / m * L;
+    const a = nIdx(nOf(z.pos.x), nOf(z.pos.z)), b = nIdx(nOf(nx), nOf(nz));
+    if (a === b ? nav.pass[b] > 0 : navStep(a, b)) { z.pos.x = nx; z.pos.z = nz; z.pos.y = groundAt(nx, nz); }
+  }
+}
+window.__life = {
+  monitor() {
+    const M = {frames: 0, jumps: 0, popOut: 0, blocked: 0, soft: 0, air: 0, overlap: 0, samples: 0, jumpEx: [], popEx: []}; const last = new Map();
+    const tick = () => {
+      M.frames++;
+      const out = citizens.filter(z => z.state !== 'inside');
+      for (const z of citizens) {
+        const p = last.get(z), inside = z.state === 'inside';
+        if (p && !inside && !p.inside && z.role !== 'child') { const d = Math.hypot(z.pos.x - p.x, z.pos.z - p.z); if (d > .6) { M.jumps++; if (M.jumpEx.length < 5) M.jumpEx.push(z.state + ':' + d.toFixed(2)); } }
+        if (p && !inside && p.inside && z.role !== 'child') { const doors = [houseDoor(z.home), ...businesses.map(b => b.door)].filter(Boolean); const dd = Math.min(...doors.map(d => Math.hypot(d.x - z.pos.x, d.z - z.pos.z))), c = cellOf(z.pos), edge = c && DIRS.some(([dx, dz]) => { const n = cellAt(c.i + dx, c.j + dz); return !n || n.owned === false; }); if (dd > .6 && !edge) { M.popOut++; if (M.popEx.length < 5) M.popEx.push(z.where?.type + ':' + dd.toFixed(1) + ':' + (c && [c.i, c.j]) + ':' + z.state); } }
+        if (p && !inside && z.role !== 'child') { const k0 = nIdx(nOf(p.x), nOf(p.z)), k1 = nIdx(nOf(z.pos.x), nOf(z.pos.z)); if (!nav.pass[k1] && (p.inside || nav.pass[k0])) { (M.enter ||= []).length < 10 && M.enter.push([p.inside ? 'from-inside' : 'walk', p.st, z.state, z.goal?.kind, z.where?.type, (Math.hypot(z.pos.x - p.x, z.pos.z - p.z)).toFixed(2), (() => { const c = cellOf(z.pos); return c ? [c.i, c.j, c.kind, c.water, c.floors, (z.pos.x - wx(c.i)).toFixed(2), (z.pos.z - wx(c.j)).toFixed(2), nav.dirty].join(',') : 'none'; })()].join('/')); } }
+        last.set(z, {x: z.pos.x, z: z.pos.z, inside, st: z.state});
+      }
+      for (const z of out) { if (z.state !== 'go' || z.role === 'child') continue; M.samples++; const k = nIdx(nOf(z.pos.x), nOf(z.pos.z)); const gd = z.goal ? Math.hypot(z.goal.pt.x - z.pos.x, z.goal.pt.z - z.pos.z) : 9; if (!nav.pass[k]) { M.blocked++; if ((M.blEx ||= []).length < 12 && M.frames % 7 === 0) { const c = cellOf(z.pos); M.blEx.push([z.goal?.kind, z.goal?.data?.type, c?.kind, c?.water, c?.floors, (z.pos.x - wx(c.i)).toFixed(2), (z.pos.z - wx(c.j)).toFixed(2), z.wp.length].join('/')); } } else if (nav.pass[k] === 2 && gd > .45) M.soft++; if (Math.abs(z.pos.y - groundAt(z.pos.x, z.pos.z)) > .06) M.air++; }
+      for (let a = 0; a < out.length; a++) for (let b = a + 1; b < out.length; b++) { const A = out[a], B = out[b]; if (A.state !== 'go' && B.state !== 'go') continue; if (A.parent === B || B.parent === A) continue; if (Math.hypot(A.pos.x - B.pos.x, A.pos.z - B.pos.z) < .12 && Math.abs(A.pos.y - B.pos.y) < .3) { M.overlap++; if ((M.ovEx ||= []).length < 14 && M.frames % 5 === 0) { const gd = q => q.goal ? Math.hypot(q.goal.pt.x - q.pos.x, q.goal.pt.z - q.pos.z).toFixed(2) : '-'; M.ovEx.push([A.state, A.goal?.kind, gd(A), B.state, B.goal?.kind, gd(B), A.role, B.role].join('/')); } } }
+    };
+    window.__lifeM = M; window.__lifeTick = tick; return 1;
+  },
+  sim(steps, dt = 1 / 30, sp = 4) { const os = speed; speed = sp; for (let k = 0; k < steps; k++) { updateCity(dt); if (window.__lifeTick) window.__lifeTick(); } speed = os; return hhmm(hour) + ' d' + day; },
+  sales: () => businesses.map(b => b.type + ':' + b.sales + '/' + (b.visits || 0)).join(' '),
+  needs: () => { const c = {}; citizens.forEach(z => { if (z.need) c[z.need] = (c[z.need] || 0) + 1; }); return c; },
+  nd: () => { const n = citizens.filter(z => z.nd); const avg = k => (n.reduce((a, z) => a + z.nd[k], 0) / Math.max(1, n.length)).toFixed(2); return {food: avg('food'), coffee: avg('coffee'), fun: avg('fun')}; },
+};
+window.__life.dbg = () => ({placeOf, edgeCell, show, startStep, chooseActivity, stairsOf, groundAt, navPath});
+window.__life.open = (type) => { const used = new Set(businesses.map(b => b.cell)); const cand = cells.filter(c => c.floors > 0 && !c.biz && frontFace(c) !== undefined && !used.has(c)); const far = cand.sort((a, b) => Math.min(...businesses.filter(x => x.type === type).map(x => Math.abs(x.cell.i - b.i) + Math.abs(x.cell.j - b.j)), 99) - Math.min(...businesses.filter(x => x.type === type).map(x => Math.abs(x.cell.i - a.i) + Math.abs(x.cell.j - a.j)), 99))[0]; far.biz = type; far.bizName = 'Test ' + type; refresh(far, true); return [far.i, far.j]; };
+window.__life.count = type => businesses.filter(b => b.type === type).map(b => b.bizName + ':' + b.sales).join(' ');
+window.__life.conn = () => { navEnsure(); const cs = cells.filter(c => walkable(c) && !c.water); const comp = c => nav.comp[navNear(wx(c.i), wx(c.j), 4)]; const m = new Map(); cs.forEach(c => { const k = comp(c); m.set(k, (m.get(k) || 0) + 1); }); const bad = []; for (const a of cs) for (const b of cs) { if (bad.length > 6) break; if (comp(a) !== comp(b) && bfs(a, b)) bad.push([a.i, a.j, a.lvl, b.i, b.j, b.lvl].join(',')); } return {comps: [...m.values()].sort((a, b) => b - a), bad}; };
+window.__life.grid = () => { navEnsure(); let s = ''; for (let i = 0; i < N; i++) { for (let j = 0; j < N; j++) { const c = cellAt(i, j); let ch = '  .'; if (c.owned === false) ch = '  ~'; else if (c.water) ch = c.kind === 'bridge' ? '  =' : '  w'; else if (c.floors) ch = '  H'; else if (c.kind === 'tree') ch = '  T'; else if (walkable(c)) { const k = nav.comp[navNear(wx(i), wx(j), 4)]; ch = String(k).padStart(2) + c.lvl; } s += ch; } s += '\n'; } return s; };
 
 function sd(R) { const n = Math.floor(R() * 1e9); return {seedN: n, R: rng(n)}; }
 function makeLook(z, R) {
@@ -1418,18 +1643,24 @@ function placeOf(z) {
   const w = z.where;
   if (w.type === 'home') return houseDoor(z.home);
   if ((w.type === 'work' || w.type === 'cafeIn') && w.b?.door) return w.b.door.clone();
-  if (w.type === 'away') { const e = cells.filter(c => (c.i === 0 || c.j === 0 || c.i === N - 1 || c.j === N - 1) && walkable(c) && !c.water); const c = e.length ? pick(z.R, e) : cellOf(z.pos); return new THREE.Vector3(wx(c.i), walkY(c), wx(c.j)); }
+  if (w.type === 'away') { const c = edgeCell(z); return c ? new THREE.Vector3(wx(c.i), walkY(c), wx(c.j)) : (houseDoor(z.home) || z.pos.clone()); }
   return z.pos.clone();
 }
+function edgeCell(z) { navEnsure(); const hd = z.home && houseDoor(z.home), hk = hd ? navNear(hd.x, hd.z, 6) : -1; const e = cells.filter(c => walkable(c) && !c.water && DIRS.some(([dx, dz]) => { const n = cellAt(c.i + dx, c.j + dz); return !n || n.owned === false; }) && (hk < 0 || nav.comp[navNear(wx(c.i), wx(c.j), 4)] === nav.comp[hk])); if (!e.length) return null; const h = z.home || cellOf(z.pos); return e.sort((a, b) => (Math.abs(a.i - h.i) + Math.abs(a.j - h.j)) - (Math.abs(b.i - h.i) + Math.abs(b.j - h.j)))[(z.seedN || 0) % Math.min(2, e.length)]; }
 function show(z) { if (z.state !== 'inside') return; const p = placeOf(z); if (!p) return false; z.pos.copy(p); z.state = 'idle'; z.until = 0; return true; }
 function goTo(z, pt, kind, data = {}) {
-  z.goal = {pt: pt.clone(), kind, data};
-  const a = cellOf(z.pos), b = cellOf(pt);
-  const path = a && b && walkable(a) ? bfs(a, b) : null;
-  if (!path) { z.pos.copy(pt); z.wp = []; arrive(z); return; }
-  z.wp = [];
-  for (let i = 1; i < path.length; i++) { const c = path[i], p = path[i - 1], dx = c.i - p.i, dz = c.j - p.j; z.wp.push(new THREE.Vector3(wx(c.i) - dz * z.lane, walkY(c), wx(c.j) + dx * z.lane)); }
-  z.wp.push(pt.clone()); z.state = 'go';
+  z.goal = {pt: pt.clone(), kind, data}; z.stuck = 0;
+  if (z.pos.distanceTo(pt) < .12 && z.state !== 'inside') { z.pos.x = pt.x; z.pos.z = pt.z; z.wp = []; arrive(z); return; }
+  const path = navPath(z.pos.x, z.pos.z, pt.x, pt.z);
+  if (!path) { // unreachable: don't teleport; give up on this plan and pick something else soon
+    z.wp = []; leaveQueue(z); if (z.seat) { z.seat.by = null; z.seat = null; }
+    if (z.state === 'inside') { z.until = now() + .15; return; }
+    if (kind === 'enter') { z.state = 'inside'; z.where = data; z.until = data.until || 0; return; }
+    z.state = 'idle'; z.until = now() + .05; return;
+  }
+  z.wp = path; const e = pt.clone(); e.y = groundAt(e.x, e.z); const ek = navNear(e.x, e.z, 0), last = path.length ? navNear(path.at(-1).x, path.at(-1).z, 2) : -1;
+  const ok = nav.pass[nIdx(nOf(e.x), nOf(e.z))] > 0 && (last < 0 || navLOS(last, nIdx(nOf(e.x), nOf(e.z))) || Math.hypot(path.at(-1).x - e.x, path.at(-1).z - e.z) < .3);
+  if (ok) z.wp.push(e); else if (path.length) z.goal.pt.copy(path.at(-1)); z.state = 'go';
 }
 function arrive(z) {
   const g = z.goal; z.wp = [];
@@ -1446,11 +1677,11 @@ function release(z) { leaveQueue(z); if (z.seat) { z.seat.by = null; z.seat = nu
 function newStroll(z) {
   release(z); if (z.state === 'inside' && !show(z)) return;
   const r = z.R(), dogStep = z.step?.act === 'dog';
-  if (!dogStep && hour > 17.5 && hour < 22 && z.R() < .55) { const pl = cells.filter(c => c.kind === 'plaza'); if (pl.length) { const c = pick(z.R, pl); return goTo(z, new THREE.Vector3(wx(c.i) + (z.R() - .5) * 1.4, walkY(c), wx(c.j) + (z.R() - .5) * 1.4), 'spot', {dur: .12 + z.R() * .25}); } }
+  if (!dogStep && hour > 17.5 && hour < 22 && z.R() < .55) { const p = navRandomSpot(z, c => c.kind === 'plaza'); if (p) return goTo(z, p, 'spot', {dur: .12 + z.R() * .25}); }
   if (!dogStep && r < .35) { const s = freeSeat(publicSeats, z); if (s) return goTo(z, s.pos, 'seat', {seat: s, dur: .25 + z.R() * .4}); }
   if (r < .65 && railSpots.length) { const s = pick(z.R, railSpots); return goTo(z, s.pos, 'spot', {yaw: s.yaw, dur: .15 + z.R() * .25}); }
-  const opts = cells.filter(c => walkable(c) && !c.water); if (!opts.length) return;
-  const c = pick(z.R, opts); goTo(z, new THREE.Vector3(wx(c.i) + (z.R() - .5) * 1.2, walkY(c), wx(c.j) + (z.R() - .5) * 1.2), 'spot', {dur: .05 + z.R() * .12});
+  const p = navRandomSpot(z); if (!p) { z.state = 'idle'; z.until = now() + .1; return; }
+  goTo(z, p, 'spot', {dur: .05 + z.R() * .12});
 }
 function visit(z, type) {
   const open = businesses.filter(b => b.type === type && isOpenAt(type, hour) && b.door);
@@ -1471,7 +1702,7 @@ function shop(z, type) {
   b.queue.push(z); z.qb = b; goTo(z, qspot(b, b.queue.length - 1), 'queue');
 }
 function nearPick(z, list) { const from = z.state === 'inside' ? (z.where.type === 'home' ? z.home : cellOf(z.pos)) : cellOf(z.pos); const w = list.map(b => 1 / (1 + (from ? Math.abs(from.i - b.cell.i) + Math.abs(from.j - b.cell.j) : 5) ** 1.5)); let r = z.R() * w.reduce((a, v) => a + v, 0); for (let i = 0; i < list.length; i++) if ((r -= w[i]) <= 0) return list[i]; return list.at(-1); }
-function qspot(b, i) { if (b.qspots[i]) return b.qspots[i]; const l = b.qspots.at(-1) || b.door; return l.clone().addScaledVector(b.perp, -(i - b.qspots.length + 1) * .3); }
+function qspot(b, i) { if (nav.dirty || b.qxV !== b.qspots) { b.qx = []; b.qxV = b.qspots; navEnsure(); } if (b.qx[i]) return b.qx[i]; const l = b.qspots.at(-1) || b.door; let p = b.qspots[i] ? b.qspots[i].clone() : l.clone().addScaledVector(b.perp, -(i - b.qspots.length + 1) * .3); if (!navOK(p.x, p.z) || Math.abs(groundAt(p.x, p.z) - l.y) > .2) { const k = navNear(p.x, p.z, 6); if (k >= 0) p = nodeVec(k); } return b.qx[i] = p; }
 function startStep(z, st) {
   const act = st.act;
   if (act === 'home') { if (z.state === 'inside' && z.where.type === 'home') return; release(z); if (z.state === 'inside' && !show(z)) return; const d = houseDoor(z.home); if (!d) { z.state = 'inside'; z.where = {type: 'home'}; return; } return goTo(z, d, 'enter', {type: 'home'}); }
@@ -1482,18 +1713,17 @@ function startStep(z, st) {
     if (z.role === 'staff' && b.seats.length) return goTo(z, b.door, 'serve');
     return goTo(z, b.door, 'enter', {type: 'work', b});
   }
-  if (act === 'away' || act === 'school') { release(z); if (z.state === 'inside' && z.where.type === 'away') return; if (z.state === 'inside' && !show(z)) return; const e = cells.filter(c => (c.i === 0 || c.j === 0 || c.i === N - 1 || c.j === N - 1) && walkable(c) && !c.water); if (!e.length) { z.state = 'inside'; z.where = {type: 'away'}; return; } const c = pick(z.R, e); return goTo(z, new THREE.Vector3(wx(c.i), walkY(c), wx(c.j)), 'enter', {type: 'away'}); }
+  if (act === 'away' || act === 'school') { release(z); if (z.state === 'inside' && z.where.type === 'away') return; if (z.state === 'inside' && !show(z)) return; const c = edgeCell(z); if (!c) { z.state = 'inside'; z.where = {type: 'away'}; return; } return goTo(z, new THREE.Vector3(wx(c.i), walkY(c), wx(c.j)), 'enter', {type: 'away'}); }
   if (act === 'party') { release(z); if (z.state === 'inside' && !show(z)) return; const pl = cells.filter(c => c.kind === 'plaza'), opts = pl.length && Math.random() < .7 ? pl : cells.filter(c => walkable(c) && !c.water); if (!opts.length) return; const c = nearPick(z, opts.map(cc => ({cell: cc}))).cell; return goTo(z, new THREE.Vector3(wx(c.i) + (Math.random() - .5) * 1.6, walkY(c), wx(c.j) + (Math.random() - .5) * 1.6), 'spot', {dance: true}); }
   if (act === 'deliver') { z.route = businesses.filter(b => b.door).sort((a, b) => a.cell.i - b.cell.i || a.cell.j - b.cell.j); return nextDelivery(z); }
   if (act === 'busk') { release(z); if (z.state === 'inside' && !show(z)) return; const open = businesses.filter(b => (b.type === 'cafe' || b.type === 'tasca') && isOpenAt(b.type, hour) && b.door); const b = open.sort((a, d) => d.seats.filter(s => s.by).length - a.seats.filter(s => s.by).length)[0]; if (!b) return newStroll(z); return goTo(z, b.door.clone().addScaledVector(b.perp, 1.05).add(new THREE.Vector3(Math.sin(b.yawOut) * .45, 0, Math.cos(b.yawOut) * .45)), 'spot', {busk: true, yaw: b.yawOut}); }
   if (act === 'paint') { release(z); if (z.state === 'inside' && !show(z)) return; const s = railSpots.length ? pick(Math.random, railSpots) : null; if (!s) return newStroll(z); return goTo(z, s.pos, 'spot', {paint: true, yaw: s.yaw}); }
   if (act === 'concert') { release(z); if (z.state === 'inside' && !show(z)) return; const c = stageCell; return goTo(z, new THREE.Vector3(wx(c.i) - .2 + (Math.random() - .5) * 1.2, walkY(c), wx(c.j) + (Math.random() - .5) * 1.4), 'spot', {dance: true}); }
-  if (act === 'cafe' || act === 'tasca' || act === 'winebar' || act === 'cinema') return visit(z, act);
-  if (act === 'shop') return shop(z, st.arg || 'grocer');
+  if (['cafe', 'tasca', 'winebar', 'cinema', 'shop', 'stroll'].includes(act)) return chooseActivity(z, act === 'shop' ? st.arg : act === 'stroll' ? null : act);
   return newStroll(z);
 }
 function nextDelivery(z) { release(z); if (z.state === 'inside' && !show(z)) return; const b = z.route?.shift(); if (!b) return newStroll(z); goTo(z, b.door.clone().addScaledVector(b.perp, .35), 'spot', {dur: .06, yaw: b.yawOut + Math.PI}); }
-function afterActivity(z) { const a = z.step?.act; if (a === 'deliver') return nextDelivery(z); if (a === 'party' || a === 'busk' || a === 'paint' || a === 'concert') return; if (a === 'home' || a === 'work' || a === 'away' || a === 'school') { z.step = null; return; } newStroll(z); }
+function afterActivity(z) { const a = z.step?.act; if (a === 'errand') { z.step = null; return; } if (a === 'deliver') return nextDelivery(z); if (a === 'party' || a === 'busk' || a === 'paint' || a === 'concert') return; if (a === 'home' || a === 'work' || a === 'away' || a === 'school') { z.step = null; return; } chooseActivity(z, null); }
 function warmStart() {
   for (const z of citizens) {
     if (z.role === 'child' || z.role === 'baby') continue;
@@ -1501,8 +1731,7 @@ function warmStart() {
     if (st.act === 'home') { z.where = {type: 'home'}; continue; }
     if (st.act === 'away' || st.act === 'school') { z.where = {type: 'away'}; continue; }
     if (st.act === 'work' && z.work?.door && !z.work.keeper && z.role === 'keeper') { z.where = {type: 'work', b: z.work}; continue; }
-    const opts = cells.filter(c => walkable(c) && !c.water); if (!opts.length) continue;
-    const c = pick(z.R, opts); z.pos.set(wx(c.i) + (z.R() - .5), walkY(c), wx(c.j) + (z.R() - .5)); z.state = 'idle'; z.until = 0;
+    const hd = houseDoor(z.home); if (hd) z.pos.copy(hd); const p = navRandomSpot(z, c => !c.water); if (!p) continue; z.pos.copy(p); z.state = 'idle'; z.until = 0;
     startStep(z, st);
   }
 }
@@ -1537,8 +1766,10 @@ function simTick() {
   const t = now();
   for (const z of citizens) {
     if (z.role === 'child' || z.role === 'baby') continue;
+    needsTick(z);
     const st = currentStep(z);
     if (st !== z.step) { z.step = st; startStep(z, st); continue; }
+    if (z.state === 'inside' && z.where?.type === 'home' && hour > 8 && hour < 19.5 && t > (z.errCD || 0) && Math.min(z.nd.food, z.nd.coffee) < .2) { z.errCD = t + 2.5; const o = shopOptions(z, null).filter(o => (SAT[o.b.type].food || 0) + (SAT[o.b.type].coffee || 0) > .3)[0]; if (o) { z.step = {act: 'errand', at: hour}; goBusiness(z, o.b); continue; } }
     if (z.state === 'sit' && t >= z.until) afterActivity(z);
     else if (z.state === 'idle' && z.until && t >= z.until) afterActivity(z);
     else if (z.state === 'inside' && z.where.type === 'cafeIn' && t >= z.until) { show(z); afterActivity(z); }
@@ -1594,11 +1825,12 @@ function updateCity(dt) {
     if (z.role === 'child') continue;
     if (z.state === 'go' && z.wp.length) {
       const tg = z.wp[0]; _d.set(tg.x - z.pos.x, 0, tg.z - z.pos.z); const dist = _d.length(), step = sp * (z.lean ? .7 : 1) * dt;
-      if (dist <= step + .001) { z.pos.x = tg.x; z.pos.z = tg.z; z.pos.y = tg.y; z.wp.shift(); if (!z.wp.length) arrive(z); }
-      else { z.pos.addScaledVector(_d, step / dist); z.pos.y += (tg.y - z.pos.y) * Math.min(1, step / dist); z.yaw = Math.atan2(_d.x, _d.z); z.moving = speed > 0; }
+      if (dist <= step + .001) { z.pos.x = tg.x; z.pos.z = tg.z; z.wp.shift(); z.stuck = 0; if (!z.wp.length) { z.pos.y = groundAt(z.pos.x, z.pos.z); arrive(z); } }
+      else { const ox = z.pos.x, oz = z.pos.z; z.pos.addScaledVector(_d, step / dist); z.yaw = Math.atan2(_d.x, _d.z); z.moving = speed > 0; z._lastD = z._lastD ?? dist; if (dist > z._lastD - step * .3) z.stuck = (z.stuck || 0) + dt; else z.stuck = 0; z._lastD = dist; if (z.stuck > 2.5 && z.goal) { z.stuck = 0; z._lastD = null; const g = z.goal; goTo(z, g.pt, g.kind, g.data); } }
+      z.pos.y = groundAt(z.pos.x, z.pos.z);
     } else if (z.state === 'queue' && z.qb) {
       const tg = qspot(z.qb, Math.max(0, z.qb.queue.indexOf(z))); _d.set(tg.x - z.pos.x, 0, tg.z - z.pos.z); const dist = _d.length();
-      if (dist > .04) { const step = Math.min(dist, sp * .6 * dt); z.pos.addScaledVector(_d, step / dist); z.pos.y = tg.y; z.yaw = Math.atan2(_d.x, _d.z); z.moving = speed > 0; }
+      if (dist > .04) { const step = Math.min(dist, sp * .6 * dt); z.pos.addScaledVector(_d, step / dist); z.pos.y = groundAt(z.pos.x, z.pos.z); z.yaw = Math.atan2(_d.x, _d.z); z.moving = speed > 0; }
       else z.yaw += (Math.atan2(z.qb.door.x - z.pos.x, z.qb.door.z - z.pos.z) - z.yaw) * .1;
     } else if (z.state === 'serve') {
       const b = z.work; z.serveT -= dt * speed;
@@ -1611,11 +1843,12 @@ function updateCity(dt) {
   }
   for (const z of citizens) if (z.role === 'child') {
     const p = z.parent; z.state = p && p.state !== 'inside' ? 'follow' : 'inside';
-    if (z.state === 'follow') { const side = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw)).multiplyScalar(.24); const tg = p.pos.clone().add(side); z.pos.lerp(tg, Math.min(1, dt * 6)); z.pos.y = p.pos.y; z.yaw = p.yaw; z.moving = p.moving; if (z.moving) z.phase += dt * speed * 12; }
+    if (z.state === 'follow') { const side = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw)).multiplyScalar(.24); let tg = p.pos.clone().add(side); if (!navOK(tg.x, tg.z) || Math.abs(groundAt(tg.x, tg.z) - p.pos.y) > .2) tg = p.pos.clone().addScaledVector(side, -.4).add(new THREE.Vector3(-Math.sin(p.yaw) * .2, 0, -Math.cos(p.yaw) * .2)); if (z.pos.distanceTo(p.pos) > 2) z.pos.copy(p.pos); z.pos.lerp(tg, Math.min(1, dt * 6)); z.pos.y = groundAt(z.pos.x, z.pos.z); z.yaw = p.yaw; z.moving = p.moving; if (z.moving) z.phase += dt * speed * 12; }
   }
+  if (speed > 0) separate(dt);
   for (const z of citizens) if (z.dog) {
     const show_ = z.state !== 'inside' && z.step?.act === 'dog'; z.dog.on = show_;
-    if (show_) { const tg = z.pos.clone().add(new THREE.Vector3(Math.sin(z.yaw + 2.6) * .4, 0, Math.cos(z.yaw + 2.6) * .4)); const dd = tg.clone().sub(z.dog.pos); dd.y = 0; if (dd.length() > 2) z.dog.pos.copy(tg); else { z.dog.pos.lerp(tg, Math.min(1, dt * 3)); if (dd.length() > .05) z.dog.yaw = Math.atan2(dd.x, dd.z); } z.dog.pos.y = z.pos.y; }
+    if (show_) { let tg = z.pos.clone().add(new THREE.Vector3(Math.sin(z.yaw + 2.6) * .4, 0, Math.cos(z.yaw + 2.6) * .4)); if (!navOK(tg.x, tg.z) || Math.abs(groundAt(tg.x, tg.z) - z.pos.y) > .2) tg = z.pos.clone().add(new THREE.Vector3(-Math.sin(z.yaw) * .3, 0, -Math.cos(z.yaw) * .3)); const dd = tg.clone().sub(z.dog.pos); dd.y = 0; if (dd.length() > 2) z.dog.pos.copy(tg); else { z.dog.pos.lerp(tg, Math.min(1, dt * 3)); if (dd.length() > .05) z.dog.yaw = Math.atan2(dd.x, dd.z); } z.dog.pos.y = groundAt(z.dog.pos.x, z.dog.pos.z); }
   }
 }
 
@@ -1632,7 +1865,7 @@ const SK = {sets: [], maskScene: new THREE.Scene()};
 const SKIN_GLSL = `
 uniform highp sampler2D uBones; uniform highp sampler2D uPal; uniform int uDyn;
 attribute vec2 aBone; attribute float aBW; attribute float aPart; attribute float aReg; attribute float aFace; attribute float aRow;
-varying vec3 vSkC; varying float vSkPat; varying vec3 vSkL;
+varying vec3 vSkC; varying float vSkPat; varying vec3 vSkL; varying float vSkF;
 vec3 skP; vec3 skN;
 mat4 skM(int b,int r){vec4 a=texelFetch(uBones,ivec2(b*3,r),0),c=texelFetch(uBones,ivec2(b*3+1,r),0),d=texelFetch(uBones,ivec2(b*3+2,r),0);
   return mat4(a.x,c.x,d.x,0.,a.y,c.y,d.y,0.,a.z,c.z,d.z,0.,a.w,c.w,d.w,1.);}
@@ -1654,7 +1887,7 @@ void skinIt(vec3 p,vec3 n){
   skN=normalize(mat3(S)*n);
   vSkC=texelFetch(uPal,ivec2(int(aReg+.5),r),0).rgb;
   vSkPat=aReg>.5&&aReg<1.5?d1.z:0.;
-  vSkL=p;
+  vSkL=p; vSkF=d2.z;
 }`;
 function skinPatchVS(src, withNormal) {
   src = SKIN_GLSL + '\n' + src;
@@ -1665,7 +1898,8 @@ function skinPatchVS(src, withNormal) {
   return src;
 }
 function skinMats(U) {
-  const hook = (m, normal, frag) => { m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); sh.vertexShader = skinPatchVS(sh.vertexShader, normal); if (frag) sh.fragmentShader = frag(sh.fragmentShader); }; m.customProgramCacheKey = () => 'skin' + m.type; return m; };
+  const fade = fs => 'varying float vSkF;\n' + fs.replace('void main() {', 'void main() {\n if(vSkF>.001&&fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))))<vSkF)discard;');
+  const hook = (m, normal, frag) => { m.onBeforeCompile = sh => { Object.assign(sh.uniforms, U); sh.vertexShader = skinPatchVS(sh.vertexShader, normal); sh.fragmentShader = fade(frag ? frag(sh.fragmentShader) : sh.fragmentShader); }; m.customProgramCacheKey = () => 'skin' + m.type; return m; };
   const toon = hook(new THREE.MeshToonMaterial({gradientMap: grad}), true, fs => 'varying vec3 vSkC;varying float vSkPat;varying vec3 vSkL;\n' + fs.replace('vec4 diffuseColor = vec4( diffuse, opacity );',
     `vec3 kc=vSkC;
      if(vSkPat>.5){float st;vec3 alt;
@@ -1898,19 +2132,25 @@ function poseAll(t) {
   // waving: occasional greeting between passers-by (scan a few people per frame)
   if (citizens.length) for (let k = 0; k < 6; k++) { const z = citizens[waveScan++ % citizens.length]; if (!z.an || z.state !== 'go' || !z.chatty || z.an.waveCD > t) continue; for (const o of citizens) { if (o === z || o.state === 'inside' || o.role === 'child') continue; if (Math.abs(o.pos.x - z.pos.x) + Math.abs(o.pos.z - z.pos.z) < 1.3) { if (Math.random() < .35) { z.an.waveT = t; z.an.lookAt = o; z.an.lookUntil = t + 1.6; } z.an.waveCD = t + 6 + Math.random() * 8; break; } } }
   citizens.forEach((z, i) => {
-    if (z.state === 'inside') return;
+    const an = z.an;
+    if (z.state === 'inside') { // fade out where they went in, then vanish
+      if (!an || an.fade <= 0 || an.row !== i) { if (an) an.fade = 0; return; }
+      an.fade = Math.max(0, an.fade - dt * 2.6); if (!an.fade) return;
+      hum.add(i, an.lod ?? 1); hum.dyn(i, 2, lookX(z).bust, lookX(z).hips, 1 - an.fade, 0); return;
+    }
     const camD = cam.distanceTo(z.pos); if (camD > lodFar) return;
     const lod = camD < nearD ? 0 : camD < lodMid ? 1 : 2;
     hum.add(i, lod); st[['near', 'mid', 'far'][lod]]++;
-    if (lod === 2 && (frameN + i) % 3 && z.an) return; // far: pose every 3rd frame
-    posed++; poseHuman(z, i, t, lod === 2 ? dt * 3 : dt, lod, rain, sea);
+    if (lod === 2 && (frameN + i) % 3 && an && an.row === i && an.fade >= 1) return; // far: pose every 3rd frame
+    posed++; poseHuman(z, i, t, lod === 2 && an?.row === i ? dt * 3 : dt, lod, rain, sea);
   });
   st.posed = posed; hum.end(); updatePlayBalls(t);
 }
 function poseHuman(z, i, t, dt, lod, rain, sea) {
   const x = lookX(z), G = GAIT[x.gait], child = z.role === 'child', s = z.s;
-  const an = z.an ||= {ry: z.yaw, gp: z.phase, lp: z.pos.clone(), sitK: z.state === 'sit' ? 1 : 0, hair: {a: 0, v: 0}, skirt: {a: 0, v: 0}, bag: {a: 0, v: 0}, look: 0, lookT: 0, glance: 0, blinkT: t + Math.random() * 3, spd: 0, waveT: -9, waveCD: 0, talkS: -9, prevState: '', sip: 0, sipT: t + 2 + Math.random() * 4, fidT: 0, fid: 0, laughU: 0, pointU: 0};
+  const an = z.an ||= {ry: z.yaw, gp: z.phase, lp: z.pos.clone(), sitK: z.state === 'sit' ? 1 : 0, hair: {a: 0, v: 0}, skirt: {a: 0, v: 0}, bag: {a: 0, v: 0}, look: 0, lookT: 0, glance: 0, fade: 0, row: i, lod: 1, blinkT: t + Math.random() * 3, spd: 0, waveT: -9, waveCD: 0, talkS: -9, prevState: '', sip: 0, sipT: t + 2 + Math.random() * 4, fidT: 0, fid: 0, laughU: 0, pointU: 0};
   // ---- state bookkeeping
+  an.row = i; an.lod = lod; an.fade = Math.min(1, an.fade + dt * 2.6);
   if (an.prevState !== z.state) { if (z.state === 'talk') an.talkS = t; an.prevState = z.state; }
   // render position (kids playing circle around a resting parent)
   const p = z.pos; let px = p.x, py = p.y, pz = p.z, yawT = z.yaw, playing = false;
@@ -2075,7 +2315,7 @@ function poseHuman(z, i, t, dt, lod, rain, sea) {
   if (z.dog) (an.hand ||= new THREE.Vector3()).set(0, -.02, .01).applyMatrix4(HM[HB.hnA]);
   hum.dyn(i, 0, mA, mB, smile, open);
   hum.dyn(i, 1, blink, brow, x.pattern, x.belly);
-  hum.dyn(i, 2, x.bust, x.hips, 0, 0);
+  hum.dyn(i, 2, x.bust, x.hips, 1 - an.fade, 0);
 }
 /* kids' balls */
 const ballMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.035, 1), new THREE.MeshToonMaterial({gradientMap: grad}), 24);
@@ -2323,8 +2563,8 @@ function updateEquines(t, dt) {
     if (e.kind === 'donkey') {
       if (!streets.length) return;
       if (!e.on) { const c = pick(Math.random, streets); e.pos.set(wx(c.i), walkY(c), wx(c.j)); e.lp.copy(e.pos); e.on = true; }
-      if (day_ && !e.path.length && t > e.wait) { const from = cellOf(e.pos), to = pick(Math.random, plazas.length && Math.random() < .5 ? plazas : streets); const p = bfs(from, to, 30); if (p) e.path = p.slice(1).map(c => new THREE.Vector3(wx(c.i), walkY(c), wx(c.j))); e.wait = t + 8 + Math.random() * 10; }
-      if (e.path.length && day_) { const tg = e.path[0], d = tg.clone().sub(e.pos); const L = Math.hypot(d.x, d.z); if (L < .04) { e.path.shift(); if (!e.path.length) e.wait = t + 6 + Math.random() * 8; } else { const st = Math.min(L, dt * .32 * Math.max(.5, speed)); e.pos.x += d.x / L * st; e.pos.z += d.z / L * st; e.pos.y += (tg.y - e.pos.y) * Math.min(1, dt * 3); e.yaw = Math.atan2(d.x, d.z); } }
+      if (day_ && !e.path.length && t > e.wait) { const from = cellOf(e.pos), to = pick(Math.random, plazas.length && Math.random() < .5 ? plazas : streets); const p = navPath(e.pos.x, e.pos.z, wx(to.i), wx(to.j)); if (p) e.path = p; e.wait = t + 8 + Math.random() * 10; }
+      if (e.path.length && day_) { const tg = e.path[0], d = tg.clone().sub(e.pos); const L = Math.hypot(d.x, d.z); if (L < .04) { e.path.shift(); if (!e.path.length) e.wait = t + 6 + Math.random() * 8; } else { const st = Math.min(L, dt * .32 * Math.max(.5, speed)); e.pos.x += d.x / L * st; e.pos.z += d.z / L * st; e.pos.y = groundAt(e.pos.x, e.pos.z); e.yaw = Math.atan2(d.x, d.z); } }
     } else {
       e.on = marketOn && plazas.length > 0; if (!e.on) return;
       if (!e.home || e.home.kind !== 'plaza') { e.home = plazas[0]; e.pos.set(wx(e.home.i) + .55, topY(e.home), wx(e.home.j) - .2); e.yaw = 1.2; e.lp.copy(e.pos); }
@@ -2546,7 +2786,7 @@ function newBizBooks(b) { b.cash ??= 200; b.rev ??= 0; b.hist ??= []; b.sales ??
 function pay(z, b) {
   const p = PRICE[b.type] * (.85 + z.R() * .3);
   if ((z.wallet ?? 0) < p) { say3(z, 'Too expensive today…'); z.missed = (z.missed || 0) + 1; return false; }
-  const pm = priceMult(b.type) * synergyMult(b); z.wallet -= p; newBizBooks(b); b.rev += p * pm; b.cash += p * pm; b.sales++; coinPop(b, p * pm); dayStats.sales[b.type] = (dayStats.sales[b.type] || 0) + 1; dayStats.served++; z.spentToday = (z.spentToday || 0) + p; z.visitsToday = (z.visitsToday || 0) + 1; return true;
+  satisfy(z, b.type); let sm = 1; try { sm = synergyMult(b); } catch (e) { } const pm = priceMult(b.type) * sm; z.wallet -= p; newBizBooks(b); b.rev += p * pm; b.cash += p * pm; b.sales++; try { coinPop(b, p * pm); } catch (e) { } dayStats.sales[b.type] = (dayStats.sales[b.type] || 0) + 1; dayStats.served++; z.spentToday = (z.spentToday || 0) + p; z.visitsToday = (z.visitsToday || 0) + 1; return true;
 }
 function joyOf(z) {
   let j = .55; const why = [];
@@ -3455,6 +3695,26 @@ function metaDay() {
 function metaHour() { checkGoals(); checkStories(); checkScenario(false); computeTraits(); if (notables.gossip && citizens.includes(notables.gossip) && paper.length && Math.random() < .4 && notables.gossip.state !== 'inside') say3(notables.gossip, `Did you hear? ${paper.at(-1).items[0].slice(0, 46)}…`); }
 
 /* ---------- town generation ---------- */
+function connectStreets() {
+  for (let loop = 0; loop < 14; loop++) {
+    const comp = new Map(); let n = 0; const sizes = [];
+    for (const c of cells) { if (comp.has(c) || !walkable(c)) continue; const q = [c]; comp.set(c, n); let k = 0; while (q.length) { const a = q.pop(); k++; for (const [dx, dz] of DIRS) { const b = cellAt(a.i + dx, a.j + dz); if (b && !comp.has(b) && canStep(a, b, dx)) { comp.set(b, n); q.push(b); } } } sizes.push(k); n++; }
+    if (n <= 1) return;
+    const small = sizes.indexOf(Math.min(...sizes)), dist = new Map(), prev = new Map(), open = [];
+    for (const c of cells) if (comp.get(c) === small) { dist.set(c, 0); open.push(c); }
+    let goal = null;
+    while (open.length) {
+      open.sort((a, b) => dist.get(b) - dist.get(a)); const a = open.pop();
+      if (comp.has(a) && comp.get(a) !== small) { goal = a; break; }
+      for (const [dx, dz] of DIRS) { const b = cellAt(a.i + dx, a.j + dz); if (!b || b.owned === false) continue;
+        if (!b.water && !a.water && Math.abs(a.lvl - b.lvl) > 1) continue; if ((b.water || a.water) && dx !== 0) continue;
+        const cost = walkable(b) ? .2 : b.water ? 4 : b.floors ? 3 + b.floors * .3 : 1, d = dist.get(a) + cost;
+        if (d < (dist.get(b) ?? 1e9)) { dist.set(b, d); prev.set(b, a); if (!open.includes(b)) open.push(b); } }
+    }
+    if (!goal) { cells.forEach(c => { if (comp.get(c) === small && !c.water) { /* unreachable pocket: leave */ } }); return; }
+    for (let c = goal; c && comp.get(c) !== small; c = prev.get(c)) { if (c.water) c.kind = 'bridge'; else { c.floors = 0; if (c.kind === 'tree') c.kind = null; } }
+  }
+}
 function generate(seed, opt = {}) {
   cells.forEach(c => { if (c.tmesh) terrainG.remove(c.tmesh); if (c.obj) objG.remove(c.obj); }); businesses = []; tram = null; funi = null;
   cells = [];
@@ -3481,6 +3741,7 @@ function generate(seed, opt = {}) {
   }
   const bi = [2 + Math.floor(R() * 4), 8 + Math.floor(R() * 4)];
   if (!opt.noBridges) bi.forEach(i => cells.filter(c => c.i === i && c.water).forEach(c => c.kind = 'bridge'));
+  connectStreets();
   assignBusinesses(R);
   if (opt.emptyShops) cells.forEach(c => { if (c.biz && R() < .6) c.biz = null; });
   cells.forEach(c => { rebuildTerrain(c); rebuildObj(c); });
@@ -4842,11 +5103,13 @@ function tickRent() {
 }
 
 /* ---- needs above heads ---- */
-const NEED = {food: ['🍞', 'Wants a bakery or grocer nearby'], cafe: ['☕', 'Wants a café nearby'], green: ['🌳', 'Wants trees nearby'], lamp: ['💡', 'Street is too dark']};
+const NEED = {cut: ['🚧', 'Our street is cut off from the rest of town'], food: ['🍞', 'Hungry: no bakery, grocer or fishmonger within walking distance'], cafe: ['☕', 'Wants a coffee: no café within walking distance'], green: ['🌳', 'Wants trees nearby'], lamp: ['💡', 'Street is too dark']};
 function needOf(z) {
-  const h = z.home; if (!h) return null;
-  if (!z.food) return 'food';
-  if (!g2Near(h, 4, n => n.biz === 'cafe' || n.biz === 'tasca')) return 'cafe';
+  const h = z.home; if (!h) return null; const n = needs(z), from = houseDoor(h) || z.pos;
+  if (businesses.length && businesses.every(b => !b.door || navDist(b, from) >= 1e8)) return 'cut';
+  const has = types => businesses.some(b => types.includes(b.type) && b.door && navDist(b, from) <= MAXWALK(z));
+  if (n.food < .35 && !has(['bakery', 'grocer', 'fish'])) return 'food';
+  if (n.coffee < .35 && !has(['cafe', 'tasca'])) return 'cafe';
   if (!(h.yard || []).includes('tree') && !g2Near(h, 2, n => n.kind === 'tree' || n.kind === 'plaza' || hasYard(n, 'tree'))) return 'green';
   if ((hour > 18.5 || hour < 6) && !(h.yard || []).includes('lamp') && !g2Near(h, 2, n => n.kind === 'lamp' || hasYard(n, 'lamp'))) return 'lamp';
   return null;
@@ -4855,6 +5118,7 @@ const needEls = Array.from({length: 5}, () => { const d = document.createElement
 let needT = 0, needShown = [];
 function nearestShopHouse(c) { const opts = cells.filter(n => n.floors > 0 && !n.biz && frontFace(n) !== undefined && n.owned !== false); opts.sort((a, b) => (Math.abs(a.i - c.i) + Math.abs(a.j - c.j)) - (Math.abs(b.i - c.i) + Math.abs(b.j - c.j))); return opts[0]; }
 function solveNeed(z, k) {
+  if (k === 'cut') { setHover(z.home); say('Connect this street: remove a house or tree, add a bridge, or build stairs (one level at a time)'); return; }
   if (k === 'food' || k === 'cafe') { const c = nearestShopHouse(z.home); if (c) { armTool('look'); houseCard(c); say(k === 'cafe' ? 'Open a café here' : 'Open a bakery or grocer here'); } else say('Build a house with a door on a street first'); }
   else { armTool(k === 'green' ? 'tree' : 'lamp'); setHover(z.home); say(k === 'green' ? `Plant a tree near ${z.name.split(' ')[0]}'s home (or in its garden)` : `Light a lamp near ${z.name.split(' ')[0]}'s home`); }
 }
