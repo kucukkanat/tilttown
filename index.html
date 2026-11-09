@@ -49,6 +49,9 @@
   #card .album{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}#card figure{margin:0}#card figure img{width:100%;border-radius:6px;display:block}#card figcaption{font-size:11px;opacity:.8;margin-top:2px}#card .sec div{aspect-ratio:16/10;border-radius:6px;background:rgba(243,230,204,.08);display:grid;place-items:center;font:600 22px Fraunces,serif;opacity:.5}
   #card .shopsec{border-top:1px solid rgba(243,230,204,.12);margin-top:8px;padding-top:6px}#card .shopsec h5{margin:4px 0 6px;font:italic 600 15px Fraunces,Georgia,serif}
   #card .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin:6px 0}#card .stype{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:48px;text-align:left;background:rgba(243,230,204,.08)}#card .stype i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-bottom:2px}#card .stype small{opacity:.7;font-weight:500}#card .stype.poor small{color:#ffb4a0;opacity:1}#card .act.danger{color:#ffb4a0}
+  #card .shead{display:flex;align-items:center;gap:10px;margin:2px 0 8px}#card .shead i{width:40px;height:40px;border-radius:50%;flex:none;background-size:400% 300%;box-shadow:0 2px 6px rgba(0,0,0,.35)}#card .shead b{font:600 15px Inter,system-ui,sans-serif!important;display:block}#card .shead small{display:block}#card .shead>div{flex:1;min-width:0}
+  #card .badge{font:600 11px Inter,system-ui,sans-serif;padding:4px 8px;border-radius:8px;background:rgba(243,230,204,.12);white-space:nowrap}#card .badge.good{background:rgba(111,154,78,.35);color:#d8f0c0}#card .badge.bad{background:rgba(192,68,46,.35);color:#ffd0c4}
+  #card .sstats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 6px}#card .sstats div{background:rgba(243,230,204,.07);border-radius:10px;padding:7px 8px}#card .sstats b{font:600 16px Inter,system-ui,sans-serif;display:block}#card .sstats small{opacity:.65;font-size:11px}
   #card .scn{border-top:1px solid rgba(243,230,204,.1);padding:6px 0}#card .scn p{margin:2px 0}#card .st{color:#f6c38a}#card input{background:rgba(0,0,0,.3);color:var(--paper);border:1px solid rgba(243,230,204,.2);border-radius:8px;padding:6px;font-size:12px;margin:3px 0}
   #presets button.locked{opacity:.4}
   #tut{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 32px));padding:18px;display:none;font-size:14px;line-height:1.45;z-index:5}
@@ -1594,18 +1597,18 @@ function houseCard(c, picker) {
   cardFor = {kind: 'house', c, picker};
   const b = c.bizObj, res = c.res || [];
   const shopInfo = b ? `<p><span>Shop</span>${b.name} · ${BIZ[b.type].label}</p><p><span>Hours</span>${BIZ[b.type].hours.map(([a, e]) => `${hhmm(a)}–${hhmm(e)}`).join(', ')} · ${isOpenAt(b.type, hour) ? 'Open' : 'Closed'}</p><p><span>Visits</span>${b.visits}</p><p><span>Money</span>${(newBizBooks(b), '')}today ${euro(b.rev)} · cash ${euro(b.cash)} · ${bizStatus(b)}</p><p><span>Costs/day</span>rent ${euro(RENT[b.type])}, wages ${euro(citizens.filter(z => z.work === b).reduce((a, z) => a + (WAGE[z.role] || 0), 0))}, tax 20%</p>${(() => { const staff = citizens.filter(z => z.work === b); const reg = b.who ? [...b.who.entries()].filter(([z]) => citizens.includes(z)).sort((a, d) => d[1] - a[1]).slice(0, 3).map(([z]) => z) : []; const favs = citizens.filter(z => z.fav === b && !reg.includes(z)).slice(0, 3 - reg.length); const regs = [...reg, ...favs]; return `${staff.length ? `<p><span>Staff</span>${staff.map(z => `<a data-z="${z.id}">${z.name.split(' ')[0]}</a>`).join(', ')}</p>` : ''}${regs.length ? `<p><span>Regulars</span>${regs.map(z => `<a data-z="${z.id}">${z.name.split(' ')[0]}</a>`).join(', ')}</p>` : ''}`; })()}` : '';
-  const pick_ = shopSection(c);
+  const pick_ = shopSection(c, shopInfo);
   cardEl.innerHTML = `<div class="ch"><div><b>${address(c)}</b><small>${c.floors} floor${c.floors > 1 ? 's' : ''} · ${res.length} resident${res.length === 1 ? '' : 's'}</small></div><button class="x">×</button></div>
-    ${shopInfo}${pick_}${houseExtras(c)}
+    ${pick_}${houseExtras(c)}
     ${res.length ? `<div class="res">${res.map(z => `<button class="act" data-z="${z.id}">${z.name.split(' ')[0]} · ${z.state === 'inside' && z.where.type === 'home' ? 'home' : 'out'}</button>`).join('')}</div>` : ''}`;
-  cardEl.style.display = 'block';
+  cardEl.style.display = 'block'; if (cardFor.c !== houseCard._last) cardEl.scrollTop = 0; houseCard._last = c;
   cardEl.querySelector('.x').onclick = closeCard;
   cardEl.querySelectorAll('[data-z]').forEach(bt => bt.onclick = () => personCard(citizens[+bt.dataset.z]));
   wireHouseExtras(c);
   wireShopSection(c);
 }
 const CHANGE_COST = () => Math.round(COST.shop * .5);
-function shopSection(c) {
+function shopSection(c, info = '') {
   if (!c.floors) return '';
   if (frontFace(c) === undefined) return `<div class="shopsec"><h5>Shop</h5><p class="tip">Needs a door onto a street to host a shop.</p></div>`;
   const grid = (price, skip) => `<div class="sgrid">${Object.keys(BIZ).filter(k => k !== skip).map(k => BIZ[k].locked && !has(BIZ[k].locked)
@@ -1613,7 +1616,13 @@ function shopSection(c) {
     : `<button class="act stype${price > funds ? ' poor' : ''}" data-b="${k}"><i style="background:${SHOPCOL[k][0]}"></i>${BIZ[k].label}<small>${euro(price)}</small></button>`).join('')}</div>`;
   if (!c.biz) return `<div class="shopsec"><h5>Open a shop</h5>${grid(COST.shop)}<p class="tip">A new shop starts with ${euro(200)} cash and closes if it falls below −${euro(80)}.</p></div>`;
   const closing = performance.now() - (c.closeAsk || 0) < 4000;
-  return `<div class="shopsec"><h5>Shop</h5><div class="grid"><button class="act" data-sa="change">${c.chgOpen ? 'Cancel' : 'Change type'}</button><button class="act danger" data-sa="close">${closing ? `Tap again · refund ${euro(Math.round(COST.shop * .3))}` : 'Close shop'}</button></div>${c.chgOpen ? `${grid(CHANGE_COST(), c.biz)}<p class="tip">Refitting costs half a new shop. The name, cash and staff stay.</p>` : ''}</div>`;
+  const b = c.bizObj; let head = '';
+  if (b) { const st = bizStatus(b), open = isOpenAt(b.type, hour), hrs = BIZ[b.type].hours.map(([a, e]) => `${hhmm(a)}–${hhmm(e)}`).join(', ');
+    const tone = st === 'Thriving' ? 'good' : st === 'Steady' ? '' : 'bad';
+    const rows = info.replace(/<p><span>(Shop|Hours|Visits|Money)<\/span>.*?<\/p>/g, '');
+    head = `<div class="shead"><i style="background-image:url(${ICON_ATLAS.url});background-position:${iconPos(Math.max(0, SHOP_ORDER.indexOf(b.type)))}"></i><div><b>${b.name}</b><small>${BIZ[b.type].label} · ${open ? 'Open now' : 'Closed now'} · ${hrs}</small></div><span class="badge ${tone}">${st}</span></div>
+      <div class="sstats"><div><b>${euro(b.rev)}</b><small>today</small></div><div><b>${euro(b.cash)}</b><small>cash</small></div><div><b>${b.visits}</b><small>visits</small></div></div>${rows}`; }
+  return `<div class="shopsec"><h5>Shop</h5>${head}<div class="grid"><button class="act" data-sa="change">${c.chgOpen ? 'Cancel' : 'Change type'}</button><button class="act danger" data-sa="close">${closing ? `Tap again · refund ${euro(Math.round(COST.shop * .3))}` : 'Close shop'}</button></div>${c.chgOpen ? `${grid(CHANGE_COST(), c.biz)}<p class="tip">Refitting costs half a new shop. The name, cash and staff stay.</p>` : ''}</div>`;
 }
 function hireKeeper(c) {
   const b2 = c.bizObj, pool = citizens.filter(z => z.role === 'worker' || z.role === 'retiree'); if (!b2 || !pool.length) return;
