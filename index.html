@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta name="tilt-build" content="20261109161351">
-<script id="tiltUpd">(function(){var B='20261109161351';function chk(){if(!/^https?:/.test(location.protocol))return;fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(t){var m=t.match(/name="tilt-build" content="([^"]+)"/);if(!m||m[1]===B)return;var u=new URL(location.href);if(u.searchParams.get('v')===m[1])return;u.searchParams.set('v',m[1]);location.replace(u.toString());}).catch(function(){});}chk();document.addEventListener('visibilitychange',function(){if(!document.hidden)chk();});addEventListener('pageshow',function(e){if(e.persisted)chk();});})();</script>
+<meta name="tilt-build" content="20261109165431">
+<script id="tiltUpd">(function(){var B='20261109165431';function chk(){if(!/^https?:/.test(location.protocol))return;fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(t){var m=t.match(/name="tilt-build" content="([^"]+)"/);if(!m||m[1]===B)return;var u=new URL(location.href);if(u.searchParams.get('v')===m[1])return;u.searchParams.set('v',m[1]);location.replace(u.toString());}).catch(function(){});}chk();document.addEventListener('visibilitychange',function(){if(!document.hidden)chk();});addEventListener('pageshow',function(e){if(e.persisted)chk();});})();</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Tilt Town</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@1,9..144,600&family=Inter:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Bricolage+Grotesque:opsz,wght@12..96,400..700&display=swap" rel="stylesheet">
 <style>
   :root{--ink:#24170f;--paper:#f3e6cc;--glass:rgba(28,20,16,.62);}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;overflow:hidden;background:#1a1420;font-family:Inter,system-ui,sans-serif;color:var(--paper)}
+  html,body{font-optical-sizing:auto;margin:0;height:100%;overflow:hidden;background:#1a1420;font-family:'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper)}
   canvas{display:block;width:100vw;height:100vh;touch-action:none}
   #title{position:fixed;left:16px;top:12px;pointer-events:none;text-shadow:0 2px 12px rgba(0,0,0,.45)}
-  #title h1{margin:0;font:italic 600 30px/1 Fraunces,Georgia,serif;letter-spacing:.5px}
+  #title h1{margin:0;font:400 30px/1 Caprasimo,Georgia,serif;letter-spacing:.5px}
   #title p{margin:4px 0 0;font-size:12px;opacity:.8}
   .panel{background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(243,230,204,.14);border-radius:16px}
   #presets{position:fixed;right:12px;top:12px;display:flex;flex-direction:column;gap:6px;padding:6px}
-  #presets button,#tools button,.act{font:600 12px Inter,system-ui,sans-serif;color:var(--paper);background:transparent;border:0;border-radius:10px;padding:8px 10px;cursor:pointer;white-space:nowrap}
+  #presets button,#tools button,.act{font:600 12px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper);background:transparent;border:0;border-radius:10px;padding:8px 10px;cursor:pointer;white-space:nowrap}
   #presets button{display:flex;align-items:center;gap:8px;text-align:left}
   #presets i{width:14px;height:14px;border-radius:50%;display:inline-block;border:1px solid rgba(255,255,255,.3)}
   #presets button.on,#tools button.on{background:rgba(243,230,204,.18);box-shadow:inset 0 0 0 1px rgba(243,230,204,.35)}
@@ -30,12 +30,12 @@
   input[type=range]{flex:1;accent-color:#f0a35c;height:24px}
   .act{background:rgba(243,230,204,.1)}
   #hint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 14px;font-size:13px;opacity:0;transition:opacity .4s;pointer-events:none}
-  #clk{font:600 14px Inter,system-ui,sans-serif;min-width:44px;font-variant-numeric:tabular-nums}
+  #clk{font:600 14px 'Bricolage Grotesque',system-ui,sans-serif;min-width:44px;font-variant-numeric:tabular-nums}
   .spd{display:flex;gap:2px}.spd .act{padding:7px 8px;min-width:30px}.act.on{background:rgba(243,230,204,.3)}
   .row{flex-wrap:wrap}
   #card{position:fixed;left:12px;top:124px;width:min(330px,calc(100vw - 24px));max-height:calc(100vh - 230px);overflow:auto;padding:12px 14px;display:none;font-size:13px;line-height:1.35}
   #card .ch{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px}
-  #card .ch b{font:italic 600 19px Fraunces,Georgia,serif;display:block}#card small{opacity:.75;font-size:12px}
+  #card .ch b{font:400 19px Caprasimo,Georgia,serif;display:block}#card small{opacity:.75;font-size:12px}
   #card .x{background:none;border:0;color:var(--paper);font-size:22px;line-height:1;cursor:pointer;padding:0 4px}
   #card p{margin:5px 0;display:flex;gap:8px}#card p span{opacity:.6;min-width:92px}#card .now{font-weight:600;color:#f6c38a}
   #card .plan{margin:8px 0;border-left:2px solid rgba(243,230,204,.2);padding-left:8px;font-size:12px}
@@ -43,30 +43,30 @@
   #card a[data-z]{color:#f6c38a;cursor:pointer;text-decoration:underline}
   #card .grid,#card .res{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}#card .wide{width:100%;margin-top:6px}
   #chips{position:fixed;left:14px;top:78px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100vw - 150px)}
-  .chip{padding:7px 11px;font:600 12px Inter,system-ui,sans-serif;color:var(--paper);cursor:pointer}.chip.hot{color:#f6c38a;box-shadow:inset 0 0 0 1px rgba(246,195,138,.5)}
-  #photoExit{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));display:none;padding:9px 14px;color:var(--paper);font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
+  .chip{padding:7px 11px;font:600 12px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper);cursor:pointer}.chip.hot{color:#f6c38a;box-shadow:inset 0 0 0 1px rgba(246,195,138,.5)}
+  #photoExit{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));display:none;padding:9px 14px;color:var(--paper);font:600 12px 'Bricolage Grotesque',system-ui,sans-serif;cursor:pointer}
   body.photo #bar,body.photo #presets,body.photo #chips,body.photo #title,body.photo #card,body.photo #bubbles,body.photo #hint{display:none!important}body.photo #photoExit,body.photo #snapB{display:block}
-  #snapB{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));display:none;padding:12px 20px;color:var(--paper);font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
+  #snapB{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom));display:none;padding:12px 20px;color:var(--paper);font:600 14px 'Bricolage Grotesque',system-ui,sans-serif;cursor:pointer}
   #card .gdone{opacity:.65}#card .gdone span{color:#f6c38a}#card .unl{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}#card .unl i{font-style:normal;font-size:11px;padding:3px 7px;border-radius:8px;background:rgba(243,230,204,.08);opacity:.55}#card .unl i.on{opacity:1;background:rgba(246,195,138,.2);color:#f6c38a}
-  #card .album{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}#card figure{margin:0}#card figure img{width:100%;border-radius:6px;display:block}#card figcaption{font-size:11px;opacity:.8;margin-top:2px}#card .sec div{aspect-ratio:16/10;border-radius:6px;background:rgba(243,230,204,.08);display:grid;place-items:center;font:600 22px Fraunces,serif;opacity:.5}
-  #card .shopsec{border-top:1px solid rgba(243,230,204,.12);margin-top:8px;padding-top:6px}#card .shopsec h5{margin:4px 0 6px;font:italic 600 15px Fraunces,Georgia,serif}
+  #card .album{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}#card figure{margin:0}#card figure img{width:100%;border-radius:6px;display:block}#card figcaption{font-size:11px;opacity:.8;margin-top:2px}#card .sec div{aspect-ratio:16/10;border-radius:6px;background:rgba(243,230,204,.08);display:grid;place-items:center;font:600 22px Caprasimo,serif;opacity:.5}
+  #card .shopsec{border-top:1px solid rgba(243,230,204,.12);margin-top:8px;padding-top:6px}#card .shopsec h5{margin:4px 0 6px;font:400 15px Caprasimo,Georgia,serif}
   #card .sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px;margin:6px 0}#card .stype{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:48px;text-align:left;background:rgba(243,230,204,.08)}#card .stype i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-bottom:2px}#card .stype small{opacity:.7;font-weight:500}#card .stype.poor small{color:#ffb4a0;opacity:1}#card .act.danger{color:#ffb4a0}
-  #card .shead{display:flex;align-items:center;gap:10px;margin:2px 0 8px}#card .shead i{width:40px;height:40px;border-radius:50%;flex:none;background-size:400% 300%;box-shadow:0 2px 6px rgba(0,0,0,.35)}#card .shead b{font:600 15px Inter,system-ui,sans-serif!important;display:block}#card .shead small{display:block}#card .shead>div{flex:1;min-width:0}
-  #card .badge{font:600 11px Inter,system-ui,sans-serif;padding:4px 8px;border-radius:8px;background:rgba(243,230,204,.12);white-space:nowrap}#card .badge.good{background:rgba(111,154,78,.35);color:#d8f0c0}#card .badge.bad{background:rgba(192,68,46,.35);color:#ffd0c4}
-  #card .sstats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 6px}#card .sstats div{background:rgba(243,230,204,.07);border-radius:10px;padding:7px 8px}#card .sstats b{font:600 16px Inter,system-ui,sans-serif;display:block}#card .sstats small{opacity:.65;font-size:11px}
+  #card .shead{display:flex;align-items:center;gap:10px;margin:2px 0 8px}#card .shead i{width:40px;height:40px;border-radius:50%;flex:none;background-size:400% 300%;box-shadow:0 2px 6px rgba(0,0,0,.35)}#card .shead b{font:600 15px 'Bricolage Grotesque',system-ui,sans-serif!important;display:block}#card .shead small{display:block}#card .shead>div{flex:1;min-width:0}
+  #card .badge{font:600 11px 'Bricolage Grotesque',system-ui,sans-serif;padding:4px 8px;border-radius:8px;background:rgba(243,230,204,.12);white-space:nowrap}#card .badge.good{background:rgba(111,154,78,.35);color:#d8f0c0}#card .badge.bad{background:rgba(192,68,46,.35);color:#ffd0c4}
+  #card .sstats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:0 0 6px}#card .sstats div{background:rgba(243,230,204,.07);border-radius:10px;padding:7px 8px}#card .sstats b{font:600 16px 'Bricolage Grotesque',system-ui,sans-serif;display:block}#card .sstats small{opacity:.65;font-size:11px}
   #card .scn{border-top:1px solid rgba(243,230,204,.1);padding:6px 0}#card .scn p{margin:2px 0}#card .st{color:#f6c38a}#card input{background:rgba(0,0,0,.3);color:var(--paper);border:1px solid rgba(243,230,204,.2);border-radius:8px;padding:6px;font-size:12px;margin:3px 0}
   #presets button.locked{opacity:.4}
   #tut{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(360px,calc(100vw - 32px));padding:18px;display:none;font-size:14px;line-height:1.45;z-index:5}
-  #tut b{font:italic 600 21px Fraunces,Georgia,serif;display:block;margin-bottom:6px}#tut div{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px}#tut span{margin-right:auto;opacity:.6;font-size:12px}
-  #card .req span{color:#f6c38a;min-width:52px}#card .lead{font:italic 600 16px Fraunces,Georgia,serif}
-  #eco{display:flex;gap:10px;align-items:center;padding:7px 12px;font:600 12px Inter,system-ui,sans-serif;color:var(--paper);cursor:pointer}
+  #tut b{font:400 21px Caprasimo,Georgia,serif;display:block;margin-bottom:6px}#tut div{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px}#tut span{margin-right:auto;opacity:.6;font-size:12px}
+  #card .req span{color:#f6c38a;min-width:52px}#card .lead{font:400 16px Caprasimo,Georgia,serif}
+  #eco{display:flex;gap:10px;align-items:center;padding:7px 12px;font:600 12px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper);cursor:pointer}
   #eco b{font-size:14px;color:#f6c38a}#eco span{opacity:.8}#eco.flash{animation:fl .6s 2}
   @keyframes fl{50%{background:rgba(184,52,42,.75)}}
   #toast{position:fixed;left:50%;top:14px;transform:translateX(-50%);padding:9px 14px;font-size:13px;opacity:0;transition:opacity .4s;pointer-events:none;max-width:calc(100vw - 40px);text-align:center}
   #card .tb{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}#card .tb th{text-align:left;opacity:.6;font-weight:600}#card .tb td,#card .tb th{padding:3px 4px;border-bottom:1px solid rgba(243,230,204,.1)}
   #card .tb a,#card a[data-h]{color:#f6c38a;cursor:pointer;text-decoration:underline}#card .tip{opacity:.65;font-size:11.5px;display:block}
   #bubbles{position:fixed;inset:0;pointer-events:none;overflow:hidden}
-  .bub{position:absolute;left:0;top:0;background:#fbf3e2;color:#2a1d16;font:600 11px Inter,system-ui,sans-serif;padding:4px 8px;border-radius:10px;white-space:nowrap;opacity:0;transition:opacity .25s;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+  .bub{position:absolute;left:0;top:0;background:#fbf3e2;color:#2a1d16;font:600 11px 'Bricolage Grotesque',system-ui,sans-serif;padding:4px 8px;border-radius:10px;white-space:nowrap;opacity:0;transition:opacity .25s;box-shadow:0 2px 6px rgba(0,0,0,.25)}
   .bub:after{content:'';position:absolute;left:50%;bottom:-5px;margin-left:-5px;border:5px solid transparent;border-top-color:#fbf3e2;border-bottom:0}
   @media (max-width:560px){
     #card{top:auto;bottom:calc(190px + env(safe-area-inset-bottom));max-height:42vh}
@@ -3396,7 +3396,7 @@ document.getElementById('menu').onclick = () => {
     <div class="grid"><button class="act" data-m="undo">↶ Undo</button><button class="act" data-m="photo">Photo mode</button><button class="act" data-m="fest">Hold São João tonight</button><button class="act" data-m="paper">Town paper</button><button class="act" data-m="goals">Goals & stories</button><button class="act" data-m="scen">Scenarios</button><button class="act" data-m="album">Postcard album</button>${quayWalls ? '' : `<button class="act" data-m="quay">Quay walls ${euro(500)}</button>`}</div>${traits.size ? `<p><span>Town character</span>${[...traits].map(t => `${TRAITS[t][0]} (${TRAITS[t][1]})`).join('; ')}</p>` : ''}
     <p><span>Weather</span></p><div class="grid">${W.map(w => `<button class="act ${weather === w ? 'on' : ''}" data-w="${w}">${w === 'auto' ? 'By preset' : w[0].toUpperCase() + w.slice(1)}</button>`).join('')}</div>
     <p><span>Look</span></p><div class="grid"><button class="act ${lookStyle === 'illus' ? 'on' : ''}" data-look="illus">Illustrated</button><button class="act ${lookStyle === 'paint' ? 'on' : ''}" data-look="paint">Painterly</button></div>
-    <p><span>Code</span></p><div class="grid"><input id="cheatIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Enter a code" style="flex:1;width:100%;min-height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(243,230,204,.2);background:rgba(0,0,0,.25);color:var(--paper);font:500 14px Inter,system-ui,sans-serif"></div>
+    <p><span>Code</span></p><div class="grid"><input id="cheatIn" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Enter a code" style="flex:1;width:100%;min-height:40px;padding:0 12px;border-radius:10px;border:1px solid rgba(243,230,204,.2);background:rgba(0,0,0,.25);color:var(--paper);font:500 14px 'Bricolage Grotesque',system-ui,sans-serif"></div>
     <p><span>Night brightness</span></p><div class="grid"><input id="nightB" type="range" min="0.6" max="1.8" step="0.05" value="${postU.nightB.value}" style="flex:1;width:100%;accent-color:#f0a35c;height:32px"></div>
     <p><span>Quality</span></p><div class="grid">${['auto', 'high', 'low'].map(q => `<button class="act ${quality === q ? 'on' : ''}" data-q="${q}">${q[0].toUpperCase() + q.slice(1)}</button>`).join('')}</div>
     <p><span>Town</span></p><div class="grid"><button class="act" data-m="save">Copy town code</button><button class="act" data-m="load">Load town code</button><button class="act" data-m="new">New town</button><button class="act" data-m="clear">Clear land</button><button class="act" data-m="tut">How to play</button></div>
@@ -4357,11 +4357,11 @@ const legendEl = document.createElement('div'); legendEl.id = 'legend'; legendEl
   .mi{position:absolute;transform:translate(-50%,-100%);display:flex;flex-direction:column;align-items:center;gap:2px;pointer-events:auto;cursor:pointer}
   .mi i{width:34px;height:34px;border-radius:50%;background-image:url(${ICON_ATLAS.url});background-size:400% 300%;box-shadow:0 3px 10px rgba(0,0,0,.45)}
   .mi i.closed{filter:grayscale(.8) brightness(.8)}
-  .mi b{font:600 10px Inter,system-ui,sans-serif;color:#f3e6cc;background:rgba(28,20,16,.72);padding:2px 6px;border-radius:6px;white-space:nowrap}
+  .mi b{font:600 10px 'Bricolage Grotesque',system-ui,sans-serif;color:#f3e6cc;background:rgba(28,20,16,.72);padding:2px 6px;border-radius:6px;white-space:nowrap}
   .mi:after{content:'';width:2px;height:10px;background:rgba(243,230,204,.7)}
   #legend{position:fixed;right:12px;left:auto!important;top:calc(14px + env(safe-area-inset-top))!important;bottom:auto!important;padding:8px 12px;font-size:12px;display:none;flex-direction:column;gap:5px;max-height:50vh;overflow:auto;z-index:3}
-  #legend .lh{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font:italic 600 14px Fraunces,Georgia,serif;min-height:28px}
-  #legend .lh small{font:500 11px Inter,system-ui,sans-serif;opacity:.65}
+  #legend .lh{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;font:400 14px Caprasimo,Georgia,serif;min-height:28px}
+  #legend .lh small{font:500 11px 'Bricolage Grotesque',system-ui,sans-serif;opacity:.65}
   #legend.min span{display:none}
   #legend.on{display:flex}
   #legend span{display:flex;align-items:center;gap:8px}#legend em{width:12px;height:12px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.25)}
@@ -4424,11 +4424,11 @@ const ghostLine = new THREE.LineBasicMaterial({color: 0xfff4dc, transparent: tru
 const ghost = new THREE.Group(); ghost.visible = false; scene.add(ghost);
 const tagEl = document.createElement('div'); tagEl.id = 'tag'; document.body.appendChild(tagEl);
 { const st = document.createElement('style'); st.textContent = `
-  #tag{position:fixed;pointer-events:none;transform:translate(-50%,-140%);font:600 12px Inter,system-ui,sans-serif;color:#f3e6cc;background:rgba(28,20,16,.8);padding:5px 9px;border-radius:8px;white-space:nowrap;display:none;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+  #tag{position:fixed;pointer-events:none;transform:translate(-50%,-140%);font:600 12px 'Bricolage Grotesque',system-ui,sans-serif;color:#f3e6cc;background:rgba(28,20,16,.8);padding:5px 9px;border-radius:8px;white-space:nowrap;display:none;box-shadow:0 3px 10px rgba(0,0,0,.35)}
   #tag.bad{color:#ffb4a0}
   #pins{position:fixed;inset:0;pointer-events:none}
   .pin{position:absolute;transform:translate(-50%,-100%);width:26px;height:26px;border-radius:50% 50% 50% 4px;rotate:-45deg;display:grid;place-items:center;pointer-events:auto;cursor:pointer;box-shadow:0 3px 8px rgba(0,0,0,.4);border:2px solid #f3e6cc}
-  .pin span{rotate:45deg;font:700 13px Inter,system-ui,sans-serif;color:#fff}
+  .pin span{rotate:45deg;font:700 13px 'Bricolage Grotesque',system-ui,sans-serif;color:#fff}
   body.clean #title,body.clean #chips,body.clean #presets,body.clean #pins,body.clean #legend,body.clean #mapIcons,body.clean #goalChip{visibility:hidden!important}
   #cleanB.on{background:#f0a35c;color:#24170f}
   #pinsB.on{box-shadow:inset 0 0 0 1px rgba(243,230,204,.45)}
@@ -4977,26 +4977,26 @@ const DOCK_ICON = {
 { const st = document.createElement('style'); st.textContent = `
   #bar{display:none!important}
   #dock{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));display:flex;gap:6px;padding:6px;z-index:4}
-  #dock>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;height:56px;padding:4px 8px;font:600 11px Inter,system-ui,sans-serif;color:var(--paper);background:transparent;border:0;border-radius:12px;cursor:pointer;position:relative}
+  #dock>button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:60px;height:56px;padding:4px 8px;font:600 11px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper);background:transparent;border:0;border-radius:12px;cursor:pointer;position:relative}
   #dock>button svg,.tray svg,#radial svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
   #dock>button.on{background:rgba(243,230,204,.2);box-shadow:inset 0 0 0 1px rgba(243,230,204,.35)}
   #dock>button.open{background:rgba(240,163,92,.25)}
-  #dock .clk{font:600 13px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+  #dock .clk{font:600 13px 'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums}
   #dock .paused:after{content:'II';position:absolute;top:3px;right:6px;font-size:9px;color:#f0a35c}
   .tray{position:fixed;left:50%;transform:translate(-50%,8px);bottom:calc(84px + env(safe-area-inset-bottom));width:min(560px,calc(100vw - 16px));padding:10px;display:none;z-index:4;opacity:0;transition:opacity .16s,transform .16s;touch-action:pan-x}
   .tray.show{display:block}.tray.vis{opacity:1;transform:translate(-50%,0)}
-  .tray h4{margin:0 2px 8px;font:italic 600 15px Fraunces,Georgia,serif;display:flex;justify-content:space-between;align-items:center}
-  .tray h4 small{font:500 11px Inter,system-ui,sans-serif;opacity:.6}
+  .tray h4{margin:0 2px 8px;font:400 15px Caprasimo,Georgia,serif;display:flex;justify-content:space-between;align-items:center}
+  .tray h4 small{font:500 11px 'Bricolage Grotesque',system-ui,sans-serif;opacity:.6}
   .tray .grip{width:36px;height:4px;border-radius:2px;background:rgba(243,230,204,.35);margin:-2px auto 8px}
   .tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:8px}
-  .tgrid button{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:64px;padding:8px 4px;border:0;border-radius:12px;background:rgba(243,230,204,.08);color:var(--paper);font:600 12px Inter,system-ui,sans-serif;cursor:pointer}
+  .tgrid button{display:flex;flex-direction:column;align-items:center;gap:3px;min-height:64px;padding:8px 4px;border:0;border-radius:12px;background:rgba(243,230,204,.08);color:var(--paper);font:600 12px 'Bricolage Grotesque',system-ui,sans-serif;cursor:pointer}
   .tgrid button small{font-weight:500;font-size:10.5px;opacity:.7}
   .tgrid button.on{background:rgba(243,230,204,.22);box-shadow:inset 0 0 0 1px rgba(243,230,204,.4)}
   .tgrid button.danger{color:#ffb4a0}
   .tgrid button.poor small{color:#ffb4a0;opacity:1}
   .trow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
   .trow .act{min-height:44px;min-width:48px;border-radius:12px}
-  #trayTime .big{font:600 26px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+  #trayTime .big{font:600 26px 'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums}
   #trayTime input[type=range]{width:100%;height:36px}
   #trayTime .spd .act{min-width:56px}
   #trayMore #presets{position:static!important;display:flex!important;flex-direction:row!important;flex-wrap:wrap;gap:6px;padding:0;background:none;box-shadow:none;backdrop-filter:none;max-width:none;transform:none}
@@ -5004,13 +5004,13 @@ const DOCK_ICON = {
   #trayMore #presets span{display:inline!important}
   #trayMore #presets .tog{display:none!important}
   #trayInbox .tgrid button{flex-direction:row;justify-content:flex-start;min-height:48px;padding:8px 12px;text-align:left}
-  #ctx{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));display:none;align-items:center;gap:8px;padding:6px 6px 6px 12px;z-index:3;font:600 13px Inter,system-ui,sans-serif}
+  #ctx{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom));display:none;align-items:center;gap:8px;padding:6px 6px 6px 12px;z-index:3;font:600 13px 'Bricolage Grotesque',system-ui,sans-serif}
   #ctx.show{display:flex}#ctx span{opacity:.75;font-weight:500}
-  #ctx button{min-height:40px;padding:0 14px;border-radius:10px;border:0;font:600 13px Inter,system-ui,sans-serif;cursor:pointer}
+  #ctx button{min-height:40px;padding:0 14px;border-radius:10px;border:0;font:600 13px 'Bricolage Grotesque',system-ui,sans-serif;cursor:pointer}
   #ctx .chg{background:rgba(243,230,204,.1);color:var(--paper)}#ctx .done{background:#f0a35c;color:#24170f}
-  #undoF{position:fixed;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));min-height:44px;padding:0 14px;border:0;font:600 13px Inter,system-ui,sans-serif;color:var(--paper);cursor:pointer;z-index:3;opacity:0;pointer-events:none;transition:opacity .25s}
+  #undoF{position:fixed;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));min-height:44px;padding:0 14px;border:0;font:600 13px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper);cursor:pointer;z-index:3;opacity:0;pointer-events:none;transition:opacity .25s}
   #undoF.show{opacity:1;pointer-events:auto}
-  #inboxB{position:relative;display:flex;align-items:center;gap:6px;padding:7px 11px;font:600 12px Inter,system-ui,sans-serif;color:var(--paper);cursor:pointer;border:0}
+  #inboxB{position:relative;display:flex;align-items:center;gap:6px;padding:7px 11px;font:600 12px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper);cursor:pointer;border:0}
   #inboxB svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   #inboxB b{min-width:18px;height:18px;border-radius:9px;background:#c0442e;color:#fff;font-size:11px;display:none;place-items:center;padding:0 5px}
   #inboxB.hot b{display:grid}
@@ -5020,7 +5020,7 @@ const DOCK_ICON = {
   #radial{position:fixed;left:0;top:0;width:220px;height:220px;margin:-110px 0 0 -110px;pointer-events:none;z-index:6;display:none}
   #radial.show{display:block}
   #radial .ring{position:absolute;inset:62px;border-radius:50%;border:2px solid rgba(243,230,204,.5);background:rgba(28,20,16,.35)}
-  #radial button{position:absolute;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font:600 10px Inter,system-ui,sans-serif;color:var(--paper);background:rgba(36,26,20,.9);box-shadow:0 4px 14px rgba(0,0,0,.4);pointer-events:auto;cursor:pointer;transition:transform .1s,background .1s}
+  #radial button{position:absolute;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;border:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font:600 10px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper);background:rgba(36,26,20,.9);box-shadow:0 4px 14px rgba(0,0,0,.4);pointer-events:auto;cursor:pointer;transition:transform .1s,background .1s}
   #radial button.hi{transform:scale(1.15);background:#f0a35c;color:#24170f}
   #radial button.no{opacity:.45}
   body.photo #dock,body.photo .tray,body.photo #ctx,body.photo #undoF{display:none!important}
@@ -5136,7 +5136,7 @@ dkLook.onclick = () => { closeTray(); armTool('look'); };
 { // easter egg: press and hold the clock, then slide left/right to scrub the time of day
   let hold = null, scrub = null, skipClick = false;
   const bub = document.createElement('div'); bub.id = 'scrubBub'; bub.className = 'panel'; document.body.appendChild(bub);
-  const st = document.createElement('style'); st.textContent = `#scrubBub{position:fixed;transform:translate(-50%,-100%);padding:8px 14px;font:600 20px Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;display:none;z-index:7;pointer-events:none}#scrubBub small{display:block;font:500 11px Inter,system-ui,sans-serif;opacity:.7;text-align:center}#dock>button[data-k=time]{touch-action:none}#dock>button.scrub{background:#f0a35c;color:#24170f}`; document.head.appendChild(st);
+  const st = document.createElement('style'); st.textContent = `#scrubBub{position:fixed;transform:translate(-50%,-100%);padding:8px 14px;font:600 20px 'Bricolage Grotesque',system-ui,sans-serif;font-variant-numeric:tabular-nums;display:none;z-index:7;pointer-events:none}#scrubBub small{display:block;font:500 11px 'Bricolage Grotesque',system-ui,sans-serif;opacity:.7;text-align:center}#dock>button[data-k=time]{touch-action:none}#dock>button.scrub{background:#f0a35c;color:#24170f}`; document.head.appendChild(st);
   const show = () => { const r = dkTime.getBoundingClientRect(), h = +timeEl.value; bub.style.left = (r.left + r.width / 2) + 'px'; bub.style.top = (r.top - 10) + 'px'; bub.innerHTML = `${hhmm(h)}<small>slide ◂ ▸</small>`; dkTime.querySelector('.clk').textContent = hhmm(h); };
   dkTime.addEventListener('pointerdown', e => { clearTimeout(hold); const x = e.clientX, id = e.pointerId;
     hold = setTimeout(() => { scrub = {x, h: +timeEl.value}; skipClick = true; try { dkTime.setPointerCapture(id); } catch (er) { } dkTime.classList.add('scrub'); bub.style.display = 'block'; show(); closeTray(); try { navigator.vibrate && navigator.vibrate(10); } catch (er) { } }, 380); });
@@ -5288,15 +5288,15 @@ function shopUpgradeDecor(b, M, P, R) {
 const townLevel = () => 1 + Math.floor(stars / 3), levelProg = () => (stars % 3) / 3;
 let lastLvl = null;
 { const st = document.createElement('style'); st.textContent = `
-  #lvlB,#goalT{display:flex;align-items:center;gap:7px;padding:7px 11px;font:600 12px Inter,system-ui,sans-serif;color:var(--paper);cursor:pointer;border:0}
+  #lvlB,#goalT{display:flex;align-items:center;gap:7px;padding:7px 11px;font:600 12px 'Bricolage Grotesque',system-ui,sans-serif;color:var(--paper);cursor:pointer;border:0}
   #lvlB i{width:40px;height:5px;border-radius:3px;background:rgba(243,230,204,.18);overflow:hidden;display:block}#lvlB i b{display:block;height:100%;background:#f0a35c;border-radius:3px}
   #goalT{max-width:min(320px,calc(100vw - 24px));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#goalT em{font-style:normal;color:#f6c38a;margin-left:auto}
   #quest{position:fixed;left:50%;transform:translateX(-50%);top:calc(60px + env(safe-area-inset-top));width:min(440px,calc(100vw - 20px));padding:10px 12px;display:none;z-index:5;font-size:13px}
-  #quest.show{display:block}#quest.mini p,#quest.mini .qb,#quest.mini .bar{display:none}#quest.mini{padding:7px 12px}#quest .qh{display:flex;align-items:center;gap:8px}#quest .qh b{font:italic 600 16px Fraunces,Georgia,serif}#quest .qh small{margin-left:auto;opacity:.6}
-  #quest p{margin:4px 0 8px;opacity:.85}#quest .qb{display:flex;gap:6px}#quest button{min-height:40px;padding:0 14px;border-radius:10px;border:0;font:600 13px Inter,system-ui,sans-serif;cursor:pointer}
+  #quest.show{display:block}#quest.mini p,#quest.mini .qb,#quest.mini .bar{display:none}#quest.mini{padding:7px 12px}#quest .qh{display:flex;align-items:center;gap:8px}#quest .qh b{font:400 16px Caprasimo,Georgia,serif}#quest .qh small{margin-left:auto;opacity:.6}
+  #quest p{margin:4px 0 8px;opacity:.85}#quest .qb{display:flex;gap:6px}#quest button{min-height:40px;padding:0 14px;border-radius:10px;border:0;font:600 13px 'Bricolage Grotesque',system-ui,sans-serif;cursor:pointer}
   #quest .go{background:#f0a35c;color:#24170f}#quest .skip{background:rgba(243,230,204,.1);color:var(--paper)}
   #quest .bar{height:4px;border-radius:2px;background:rgba(243,230,204,.15);margin-top:8px;overflow:hidden}#quest .bar i{display:block;height:100%;background:#f0a35c}
-  .g2fx{position:fixed;pointer-events:none;transform:translate(-50%,-50%);font:700 13px Inter,system-ui,sans-serif;z-index:4;animation:g2up 1.3s ease-out forwards;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+  .g2fx{position:fixed;pointer-events:none;transform:translate(-50%,-50%);font:700 13px 'Bricolage Grotesque',system-ui,sans-serif;z-index:4;animation:g2up 1.3s ease-out forwards;text-shadow:0 1px 3px rgba(0,0,0,.6)}
   .g2fx.coin{color:#ffd36a}.g2fx.big{font-size:22px}
   @keyframes g2up{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}15%{opacity:1;transform:translate(-50%,-60%) scale(1)}100%{opacity:0;transform:translate(-50%,-240%) scale(1)}}
   .need{position:fixed;transform:translate(-50%,-100%);width:34px;height:34px;border-radius:50%;background:#fbf3e2;display:grid;place-items:center;font-size:18px;box-shadow:0 3px 10px rgba(0,0,0,.35);cursor:pointer;z-index:3;display:none}
